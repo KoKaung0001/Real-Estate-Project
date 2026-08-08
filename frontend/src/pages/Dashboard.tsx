@@ -1,30 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Settings, Edit, Trash2, Heart, MapPin, Bed, Bath, Square, Plus, Home, Clock, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Edit, Trash2, Heart, MapPin, Bed, Bath, Square, Plus, Home, Clock, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI } from '../utils/api';
 import type { Property } from '../types';
+
+const DEMO_MY_PROPERTIES: Property[] = [
+  { id: 1, title: 'Luxury Apartment in Bahan', description: 'Beautiful apartment', price: 250000, location: 'Bahan', propertyType: 'APARTMENT', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 3, bathrooms: 2, area: 1800, imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-01T00:00:00Z' },
+  { id: 2, title: 'Modern Villa in Dagon', description: 'Spacious villa', price: 850000, location: 'Dagon', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'PENDING', bedrooms: 5, bathrooms: 4, area: 4200, imageUrl: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-05T00:00:00Z' },
+  { id: 3, title: 'Cozy Condo in Mayangone', description: 'Nice condo', price: 180000, location: 'Mayangone', propertyType: 'CONDO', status: 'FOR_SALE', approvalStatus: 'REJECTED', bedrooms: 2, bathrooms: 2, area: 1200, imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-03T00:00:00Z' },
+];
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'properties' | 'favorites'>('properties');
-  const [myProperties, setMyProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        const res = await propertyAPI.getMine();
-        setMyProperties(res.data);
-      } catch (err) {
-        console.error('Failed to fetch properties:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProperties();
-  }, []);
+  const [myProperties, setMyProperties] = useState<Property[]>(DEMO_MY_PROPERTIES);
 
   const stats = {
     total: myProperties.length,
@@ -33,14 +23,9 @@ export function Dashboard() {
     rejected: myProperties.filter(p => p.approvalStatus === 'REJECTED').length,
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (confirm('Are you sure you want to delete this property?')) {
-      try {
-        await propertyAPI.delete(id);
-        setMyProperties(myProperties.filter(p => p.id !== id));
-      } catch (err) {
-        console.error('Failed to delete property:', err);
-      }
+      setMyProperties(myProperties.filter(p => p.id !== id));
     }
   };
 
@@ -52,14 +37,6 @@ export function Dashboard() {
       default: return null;
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 pt-20 pb-12 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-50 pt-20 pb-12">

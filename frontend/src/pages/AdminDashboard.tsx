@@ -1,67 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Home, Clock, CheckCircle, XCircle, Eye, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { adminAPI } from '../utils/api';
 import type { Property } from '../types';
+
+const DEMO_PENDING: Property[] = [
+  { id: 101, title: 'Luxury Penthouse Suite', description: 'Premium penthouse', price: 2800000, location: 'Bahan', propertyType: 'APARTMENT', status: 'FOR_SALE', approvalStatus: 'PENDING', bedrooms: 4, bathrooms: 3, area: 3500, imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-07T00:00:00Z' },
+  { id: 102, title: 'Cozy Family Home', description: 'Family house', price: 650000, location: 'Hlaing', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'PENDING', bedrooms: 3, bathrooms: 2, area: 2200, imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&q=80', owner: 'buyer', ownerPhone: '09-123456789', createdAt: '2026-08-06T00:00:00Z' },
+];
+
+const DEMO_APPROVED: Property[] = [
+  { id: 201, title: 'Beachfront Villa', description: 'Villa', price: 3500000, location: 'Tamwe', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 6, bathrooms: 5, area: 5800, imageUrl: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-04T00:00:00Z' },
+  { id: 202, title: 'Mountain Retreat', description: 'Retreat', price: 780000, location: 'Kamaryut', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 3, bathrooms: 2, area: 1800, imageUrl: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80', owner: 'buyer', ownerPhone: '09-123456789', createdAt: '2026-08-02T00:00:00Z' },
+];
 
 export function AdminDashboard() {
   const { user } = useAuth();
-  const [pendingProperties, setPendingProperties] = useState<Property[]>([]);
-  const [recentApproved, setRecentApproved] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const pendingRes = await adminAPI.getAllProperties('PENDING');
-        setPendingProperties(pendingRes.data);
-        const approvedRes = await adminAPI.getAllProperties('APPROVED');
-        setRecentApproved(approvedRes.data.slice(0, 5));
-      } catch (err) {
-        console.error('Failed to fetch admin data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const handleApprove = async (id: number) => {
-    try {
-      await adminAPI.approve(id);
-      const property = pendingProperties.find((p) => p.id === id);
-      if (property) {
-        setRecentApproved([{ ...property, approvalStatus: 'APPROVED' }, ...recentApproved]);
-        setPendingProperties(pendingProperties.filter((p) => p.id !== id));
-      }
-    } catch (err) {
-      console.error('Failed to approve:', err);
-    }
-  };
-
-  const handleReject = async (id: number) => {
-    try {
-      await adminAPI.reject(id);
-      setPendingProperties(pendingProperties.filter((p) => p.id !== id));
-    } catch (err) {
-      console.error('Failed to reject:', err);
-    }
-  };
+  const [pendingProperties, setPendingProperties] = useState<Property[]>(DEMO_PENDING);
+  const [recentApproved, setRecentApproved] = useState<Property[]>(DEMO_APPROVED);
 
   const stats = [
-    { icon: Users, label: 'Total Users', value: '1,247', color: 'text-blue-600', bg: 'bg-blue-100' },
-    { icon: Home, label: 'Total Properties', value: '3,892', color: 'text-green-600', bg: 'bg-green-100' },
+    { icon: Users, label: 'Total Users', value: '5', color: 'text-blue-600', bg: 'bg-blue-100' },
+    { icon: Home, label: 'Total Properties', value: '10', color: 'text-green-600', bg: 'bg-green-100' },
     { icon: Clock, label: 'Pending Approvals', value: pendingProperties.length.toString(), color: 'text-amber-600', bg: 'bg-amber-100', urgent: true },
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 pt-20 pb-12 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  const handleApprove = (id: number) => {
+    const property = pendingProperties.find((p) => p.id === id);
+    if (property) {
+      setRecentApproved([{ ...property, approvalStatus: 'APPROVED' }, ...recentApproved]);
+      setPendingProperties(pendingProperties.filter((p) => p.id !== id));
+    }
+  };
+
+  const handleReject = (id: number) => {
+    setPendingProperties(pendingProperties.filter((p) => p.id !== id));
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pt-20 pb-12">
@@ -168,11 +142,6 @@ export function AdminDashboard() {
                   </div>
                 ))}
               </div>
-              {recentApproved.length === 0 && (
-                <div className="p-8 text-center text-slate-500">
-                  No recently approved properties
-                </div>
-              )}
             </div>
           </div>
         </div>

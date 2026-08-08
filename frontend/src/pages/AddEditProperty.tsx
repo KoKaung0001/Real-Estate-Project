@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Upload, X } from 'lucide-react';
-import { propertyAPI } from '../utils/api';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import type { PropertyType, SaleStatus } from '../types';
 
 const TOWNSHIPS = ['Bahan', 'Dagon', 'Kamaryut', 'Mayangone', 'Hlaing', 'Yankin', 'Tamwe', 'North Okkalapa'];
@@ -59,28 +58,12 @@ export function AddEditProperty() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      await propertyAPI.create({
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        location: formData.township,
-        propertyType: formData.type as PropertyType,
-        status: formData.listingType,
-        bedrooms: parseInt(formData.bedrooms) || 0,
-        bathrooms: parseInt(formData.bathrooms) || 0,
-        area: parseFloat(formData.sqft) || 0,
-        imageUrl: formData.imageUrl,
-      });
-      setSubmitted(true);
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
-    } catch (err) {
-      console.error('Failed to create property:', err);
-    } finally {
-      setLoading(false);
-    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setSubmitted(true);
+    setLoading(false);
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 2000);
   };
 
   if (submitted) {

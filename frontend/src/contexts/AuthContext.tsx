@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User } from '../types';
-import { authAPI } from '../utils/api';
 
 interface AuthContextType {
   user: User | null;
@@ -8,69 +7,64 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, phone: string) => Promise<void>;
   logout: () => void;
-  updateProfile: (data: { email?: string; phone?: string }) => Promise<void>;
+  updateProfile: (data: { email?: string; phone?: string }) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const DEMO_USERS: User[] = [
+  { id: 1, username: 'buyer', email: 'buyer@demo.com', phone: '09-123456789', role: 'USER' },
+  { id: 2, username: 'seller', email: 'seller@demo.com', phone: '09-987654321', role: 'USER' },
+  { id: 3, username: 'admin', email: 'admin@demo.com', phone: '09-111111111', role: 'ADMIN' },
+];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('urbannest-token');
     const storedUser = localStorage.getItem('urbannest-user');
-    if (token && storedUser) {
+    if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch {
-        localStorage.removeItem('urbannest-token');
         localStorage.removeItem('urbannest-user');
       }
     }
     setLoading(false);
   }, []);
 
-  const login = async (username: string, password: string) => {
-    const res = await authAPI.login({ username, password });
-    const data = res.data;
-    localStorage.setItem('urbannest-token', data.token);
-    const userData: User = {
-      id: data.id,
-      username: data.username,
-      email: data.email,
-      phone: data.phone,
-      role: data.role,
-    };
-    setUser(userData);
-    localStorage.setItem('urbannest-user', JSON.stringify(userData));
+  const login = async (username: string, _password: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const found = DEMO_USERS.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!found) {
+      throw new Error('Invalid credentials. Try: buyer, seller, or admin');
+    }
+    setUser(found);
+    localStorage.setItem('urbannest-user', JSON.stringify(found));
   };
 
-  const register = async (username: string, email: string, password: string, phone: string) => {
-    const res = await authAPI.register({ username, email, password, phone });
-    const data = res.data;
-    localStorage.setItem('urbannest-token', data.token);
-    const userData: User = {
-      id: data.id,
-      username: data.username,
-      email: data.email,
-      phone: data.phone,
-      role: data.role,
+  const register = async (username: string, email: string, _password: string, phone: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const newUser: User = {
+      id: Date.now(),
+      username,
+      email,
+      phone,
+      role: 'USER',
     };
-    setUser(userData);
-    localStorage.setItem('urbannest-user', JSON.stringify(userData));
+    setUser(newUser);
+    localStorage.setItem('urbannest-user', JSON.stringify(newUser));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('urbannest-token');
     localStorage.removeItem('urbannest-user');
   };
 
-  const updateProfile = async (data: { email?: string; phone?: string }) => {
-    const res = await import('../utils/api').then(m => m.userAPI.updateProfile(data));
+  const updateProfile = (data: { email?: string; phone?: string }) => {
     if (user) {
-      const updated = { ...user, ...res.data };
+      const updated = { ...user, ...data };
       setUser(updated);
       localStorage.setItem('urbannest-user', JSON.stringify(updated));
     }
