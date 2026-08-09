@@ -1,16 +1,16 @@
 export const YANGON_TOWNSHIPS = [
-  { id: 'bahan', nameEn: 'Bahan', nameMy: 'ဗဟို' },
+  { id: 'bahan', nameEn: 'Bahan', nameMy: 'ဗဟန်း' },
   { id: 'dagon', nameEn: 'Dagon', nameMy: 'ဒဂုံ' },
   { id: 'kamaryut', nameEn: 'Kamaryut', nameMy: 'ကမာရွတ်' },
-  { id: 'mayangone', nameEn: 'Mayangone', nameMy: 'မရမောင်း' },
+  { id: 'mayangone', nameEn: 'Mayangone', nameMy: 'မရမ်းကုန်း' },
   { id: 'hlaing', nameEn: 'Hlaing', nameMy: 'လှိုင်' },
   { id: 'yankin', nameEn: 'Yankin', nameMy: 'ရန်ကင်း' },
-  { id: 'sein', nameEn: 'Sein Pann', nameMy: 'ဆိန်ပန်' },
+  { id: 'sein', nameEn: 'Sein Pann', nameMy: 'စိန်ပန်း' },
   { id: 'sanpya', nameEn: 'San Pya', nameMy: 'စံပြ' },
   { id: 'tamwe', nameEn: 'Tamwe', nameMy: 'တာမွေ' },
   { id: 'dagon-seikkan', nameEn: 'Dagon Seikkan', nameMy: 'ဒဂုံဆိပ်ကမ်း' },
-  { id: 'north-okkalapa', nameEn: 'North Okkalapa', nameMy: 'မြောက်ဦးကလပ်' },
-  { id: 'south-okkalapa', nameEn: 'South Okkalapa', nameMy: 'တောင်ဦးကလပ်' },
+  { id: 'north-okkalapa', nameEn: 'North Okkalapa', nameMy: 'မြောက်ဥက္ကလာပ' },
+  { id: 'south-okkalapa', nameEn: 'South Okkalapa', nameMy: 'တောင်ဥက္ကလာပ' },
   { id: 'thaketa', nameEn: 'Thaketa', nameMy: 'သာကေတ' },
   { id: 'city', nameEn: 'Yangon City', nameMy: 'ရန်ကုန်မြို့' },
 ];
@@ -38,6 +38,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'U Kyaw Moe',
     ownerMy: 'ဦးကျော်မိုး',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Kyaw',
+    ownerPhone: '09-111223344',
     yearBuilt: 2020,
   },
   {
@@ -62,6 +63,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'Daw Thin Thin Aye',
     ownerMy: 'ဒေါ်သင်းသင်းအေး',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Thin',
+    ownerPhone: '09-555667788',
     yearBuilt: 2022,
   },
   {
@@ -86,6 +88,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'U Aung Zaw',
     ownerMy: 'ဦးအောင်ဇော',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aung',
+    ownerPhone: '09-999887766',
     yearBuilt: 2021,
   },
   {
@@ -110,6 +113,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'U Soe Min',
     ownerMy: 'ဦးစိုးမင်း',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Soe',
+    ownerPhone: '09-777665544',
     yearBuilt: 2019,
   },
   {
@@ -134,6 +138,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'Daw Mar Mar',
     ownerMy: 'ဒေါ်မာမာ',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mar',
+    ownerPhone: '09-888777666',
     yearBuilt: 2023,
   },
   {
@@ -158,6 +163,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'U Tin Hla',
     ownerMy: 'ဦးတင်လှ',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Tin',
+    ownerPhone: '09-444333222',
     yearBuilt: 2021,
   },
   {
@@ -182,6 +188,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'U Myo Aung',
     ownerMy: 'ဦးမျိုးအောင်',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Myo',
+    ownerPhone: '09-666555444',
     yearBuilt: 2018,
   },
   {
@@ -206,6 +213,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'Daw Khin Myo',
     ownerMy: 'ဒေါ်ခင်မျိုး',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Khin',
+    ownerPhone: '09-222333444',
     yearBuilt: 2022,
   },
   {
@@ -230,6 +238,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'U Thein Win',
     ownerMy: 'ဦးသိန်းဝင်း',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Thein',
+    ownerPhone: '09-333444555',
     yearBuilt: 2020,
   },
   {
@@ -254,6 +263,7 @@ export const MYANMAR_PROPERTIES = [
     ownerEn: 'U Aung Kyaw',
     ownerMy: 'ဦးအောင်ကြော်',
     ownerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AungKyaw',
+    ownerPhone: '09-777888999',
     yearBuilt: 2021,
   },
 ];
@@ -272,14 +282,14 @@ export const FEATURES_EN = [
 ];
 
 export const FEATURES_MY = [
-  'ဉာဏ်ရည်တု အိမ်စနစ်',
+  'စမတ်အိမ်သုံး စနစ်',
   'ရေကူးကန်',
   'အားကစားခန်း',
-  'ကားရပ်နားရန်',
+  'ကားပါကင်',
   'လုံခြုံရေး',
-  'ဥယျာဉ်',
-  'ဂရင်',
-  'လေအေးပေးစက်',
+  'ဥယျာဉ် / ပန်းခြံ',
+  'ဝရံတာ',
+  'အဲကွန်း',
   'ဓာတ်လှေကား',
-  'WiFi',
+  'ဝိုင်ဖိုင်',
 ];

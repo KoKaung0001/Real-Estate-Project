@@ -1,151 +1,363 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Home, Clock, CheckCircle, XCircle, Eye, Settings } from 'lucide-react';
+import {
+  Users,
+  Home,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye,
+  MapPin,
+  Heart,
+  BarChart3,
+  Bed,
+  Bath,
+  Square,
+  X,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useFavorites } from '../contexts/FavoritesContext';
+import { useProperties } from '../contexts/PropertiesContext';
+import { AdminSidebar } from '../components/AdminSidebar';
+import { NotificationsBell } from '../components/NotificationsBell';
 import type { Property } from '../types';
 
-const DEMO_PENDING: Property[] = [
-  { id: 101, title: 'Luxury Penthouse Suite', description: 'Premium penthouse', price: 2800000, location: 'Bahan', propertyType: 'APARTMENT', status: 'FOR_SALE', approvalStatus: 'PENDING', bedrooms: 4, bathrooms: 3, area: 3500, imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-07T00:00:00Z' },
-  { id: 102, title: 'Cozy Family Home', description: 'Family house', price: 650000, location: 'Hlaing', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'PENDING', bedrooms: 3, bathrooms: 2, area: 2200, imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&q=80', owner: 'buyer', ownerPhone: '09-123456789', createdAt: '2026-08-06T00:00:00Z' },
-];
-
-const DEMO_APPROVED: Property[] = [
-  { id: 201, title: 'Beachfront Villa', description: 'Villa', price: 3500000, location: 'Tamwe', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 6, bathrooms: 5, area: 5800, imageUrl: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-04T00:00:00Z' },
-  { id: 202, title: 'Mountain Retreat', description: 'Retreat', price: 780000, location: 'Kamaryut', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 3, bathrooms: 2, area: 1800, imageUrl: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80', owner: 'buyer', ownerPhone: '09-123456789', createdAt: '2026-08-02T00:00:00Z' },
-];
+const formatDate = (iso: string) => {
+  try {
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return iso;
+  }
+};
 
 export function AdminDashboard() {
   const { user } = useAuth();
-  const [pendingProperties, setPendingProperties] = useState<Property[]>(DEMO_PENDING);
-  const [recentApproved, setRecentApproved] = useState<Property[]>(DEMO_APPROVED);
+  const { favoriteIds } = useFavorites();
+  const { properties, setApprovalStatus } = useProperties();
+  const [reviewing, setReviewing] = useState<Property | null>(null);
+
+  const pending = properties.filter((p) => p.approvalStatus === 'PENDING');
+  const approved = properties
+    .filter((p) => p.approvalStatus === 'APPROVED')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const recentlyAdded = [...properties]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
+
+  const initial = (name: string) => (name || 'U').charAt(0).toUpperCase();
 
   const stats = [
-    { icon: Users, label: 'Total Users', value: '5', color: 'text-blue-600', bg: 'bg-blue-100' },
-    { icon: Home, label: 'Total Properties', value: '10', color: 'text-green-600', bg: 'bg-green-100' },
-    { icon: Clock, label: 'Pending Approvals', value: pendingProperties.length.toString(), color: 'text-amber-600', bg: 'bg-amber-100', urgent: true },
+    { icon: Home, label: 'Total Properties', value: properties.length.toString(), trend: '+12% this month', color: 'green' },
+    { icon: Users, label: 'Total Users', value: '5', trend: '+5 this week', color: 'blue' },
+    { icon: Clock, label: 'Pending Approvals', value: pending.length.toString(), trend: `${pending.length} awaiting review`, color: 'amber', urgent: true },
+    { icon: Heart, label: 'Total Favorites', value: favoriteIds.length.toString(), trend: '+8% this week', color: 'violet' },
   ];
 
   const handleApprove = (id: number) => {
-    const property = pendingProperties.find((p) => p.id === id);
-    if (property) {
-      setRecentApproved([{ ...property, approvalStatus: 'APPROVED' }, ...recentApproved]);
-      setPendingProperties(pendingProperties.filter((p) => p.id !== id));
-    }
+    setApprovalStatus(id, 'APPROVED');
+    setReviewing(null);
   };
 
   const handleReject = (id: number) => {
-    setPendingProperties(pendingProperties.filter((p) => p.id !== id));
+    setApprovalStatus(id, 'REJECTED');
+    setReviewing(null);
   };
 
+  const statusBadge = (status: Property['approvalStatus']) => (
+    <span
+      className={`dash-badge ${
+        status === 'APPROVED' ? 'approved'
+        : status === 'PENDING' ? 'pending' : 'rejected'
+      }`}
+    >
+      {status.charAt(0) + status.slice(1).toLowerCase()}
+    </span>
+  );
+
   return (
-    <div className="min-h-screen bg-slate-50 pt-20 pb-12">
-      <div className="section-container">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Admin Dashboard</h1>
-            <p className="text-slate-500 mt-1">Welcome back, {user?.username}</p>
-          </div>
-          <Link to="/admin/data" className="btn-secondary flex items-center gap-2">
-            <Settings className="w-5 h-5" /> Manage Data
-          </Link>
+    <div className="admin-page">
+      <div className="admin-panel-topbar">
+        <div className="admin-panel-brand">
+          <span className="admin-panel-logo"><Home /></span>
+          <span className="admin-panel-brand-name">UrbanNest</span>
+          <span className="admin-panel-brand-sub">Admin Panel</span>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          {stats.map((stat) => (
-            <div key={stat.label} className={`bg-white rounded-2xl shadow-md p-6 ${stat.urgent ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
-              <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${stat.bg}`}>
-                  <stat.icon className={`w-7 h-7 ${stat.color}`} />
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-slate-800">{stat.value}</p>
-                  <p className="text-slate-500 text-sm">{stat.label}</p>
-                </div>
-              </div>
+        <div className="admin-panel-top-actions">
+          <NotificationsBell />
+          <div className="admin-panel-profile">
+            <div className="admin-panel-avatar">
+              {user?.avatar ? <img src={user.avatar} alt={user.username} /> : initial(user?.username || 'A')}
             </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-              <div className="p-6 border-b border-slate-100">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-slate-800">Pending Approvals</h2>
-                  <span className="badge badge-warning">{pendingProperties.length} pending</span>
-                </div>
-              </div>
-              {pendingProperties.length === 0 ? (
-                <div className="p-12 text-center">
-                  <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                  <p className="text-slate-500">All caught up! No pending approvals.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {pendingProperties.map((property) => (
-                    <div key={property.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors">
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <img src={property.imageUrl} alt={property.title} className="w-full sm:w-24 h-24 object-cover rounded-xl" />
-                        <div className="flex-1">
-                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                            <div>
-                              <h3 className="font-bold text-slate-800">{property.title}</h3>
-                              <p className="text-sm text-slate-500">Submitted: {property.createdAt}</p>
-                            </div>
-                            <p className="font-bold text-blue-600">K {property.price.toLocaleString()}</p>
-                          </div>
-                          <div className="flex items-center gap-3 mt-3">
-                            <span className="text-sm text-slate-600">{property.owner}</span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-3">
-                            <button
-                              onClick={() => handleApprove(property.id)}
-                              className="flex items-center gap-1 px-4 py-2 rounded-lg bg-green-500 text-white font-medium text-sm hover:bg-green-600 transition-colors"
-                            >
-                              <CheckCircle className="w-4 h-4" /> Approve
-                            </button>
-                            <button
-                              onClick={() => handleReject(property.id)}
-                              className="flex items-center gap-1 px-4 py-2 rounded-lg bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors"
-                            >
-                              <XCircle className="w-4 h-4" /> Reject
-                            </button>
-                            <Link to={`/property/${property.id}`} className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600">
-                              <Eye className="w-5 h-5" />
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-              <div className="p-6 border-b border-slate-100">
-                <h2 className="text-xl font-bold text-slate-800">Recently Approved</h2>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {recentApproved.map((property) => (
-                  <div key={property.id} className="p-4 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <img src={property.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 truncate">{property.title}</p>
-                        <p className="text-sm text-slate-500">{property.location}</p>
-                      </div>
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <span>{user?.username || 'admin'}</span>
           </div>
         </div>
       </div>
+
+      <div className="adm-layout admin-panel-layout">
+        <AdminSidebar active="dashboard" />
+
+        <main className="adm-main">
+          <div className="adm-content admin-dash-content">
+            <div className="adm-mobile-tabs">
+              <Link to="/admin/dashboard" className="adm-mobile-tab active">
+                <BarChart3 /> Dashboard
+              </Link>
+              <Link to="/admin/manage-all?tab=properties" className="adm-mobile-tab">
+                <Home /> Properties
+              </Link>
+              <Link to="/admin/manage-all?tab=users" className="adm-mobile-tab">
+                <Users /> Users
+              </Link>
+            </div>
+
+            <div className="admin-header">
+              <div>
+                <div className="admin-header-title">Dashboard</div>
+                <div className="admin-header-sub">
+                  Welcome back, {user?.username}! Here's what's happening today.
+                </div>
+              </div>
+            </div>
+
+            <div className="admin-stats-grid">
+              {stats.map((stat) => (
+                <div key={stat.label} className={`admin-stat-card ${stat.urgent ? 'urgent' : ''}`}>
+                  <div className={`admin-stat-icon ${stat.color}`}>
+                    <stat.icon />
+                  </div>
+                  <div>
+                    <div className="admin-stat-value">{stat.value}</div>
+                    <div className="admin-stat-label">{stat.label}</div>
+                    <div className={`admin-stat-trend ${stat.urgent ? 'urgent' : ''}`}>{stat.trend}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="admin-layout">
+              <div className="admin-card">
+                <div className="admin-card-header">
+                  <span className="admin-card-title">Pending Approvals</span>
+                  <span className="admin-card-badge">{pending.length} pending</span>
+                </div>
+                {pending.length === 0 ? (
+                  <div className="admin-empty">
+                    <div className="admin-empty-icon"><CheckCircle /></div>
+                    <div className="admin-empty-text">All caught up! No pending approvals.</div>
+                  </div>
+                ) : (
+                  <div className="adm-table-wrap">
+                    <table className="adm-table">
+                      <thead>
+                        <tr>
+                          <th>Property</th>
+                          <th>Location</th>
+                          <th style={{ textAlign: 'right' }}>Price</th>
+                          <th>Owner</th>
+                          <th>Submitted</th>
+                          <th style={{ textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pending.map((property) => (
+                          <tr key={property.id}>
+                            <td>
+                              <div className="adm-property-cell">
+                                <img src={property.imageUrl} alt="" className="adm-property-thumb" />
+                                <div className="adm-property-name">{property.title}</div>
+                              </div>
+                            </td>
+                            <td>{property.location}</td>
+                            <td className="adm-price">MMK {property.price.toLocaleString()}</td>
+                            <td className="admin-cell-owner">{property.owner}</td>
+                            <td className="admin-cell-date">{formatDate(property.createdAt)}</td>
+                            <td>
+                              <div className="admin-pending-actions">
+                                <button onClick={() => handleApprove(property.id)} className="admin-btn-approve">
+                                  <CheckCircle /> Approve
+                                </button>
+                                <button onClick={() => handleReject(property.id)} className="admin-btn-reject">
+                                  <XCircle /> Reject
+                                </button>
+                                <button onClick={() => setReviewing(property)} className="admin-btn-view" aria-label="Review details" title="Review details">
+                                  <Eye />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="admin-card">
+                <div className="admin-card-header">
+                  <span className="admin-card-title">Recently Approved</span>
+                </div>
+                {approved.length === 0 ? (
+                  <div className="admin-empty">
+                    <div className="admin-empty-icon"><CheckCircle /></div>
+                    <div className="admin-empty-text">No approved listings yet.</div>
+                  </div>
+                ) : (
+                  <div className="admin-recent-list">
+                    {approved.slice(0, 4).map((property) => (
+                      <div className="admin-recent-item" key={property.id}>
+                        <img src={property.imageUrl} alt="" className="admin-recent-thumb" />
+                        <div className="admin-recent-info">
+                          <div className="admin-recent-name">{property.title}</div>
+                          <div className="admin-recent-loc">
+                            <MapPin style={{ width: 12, height: 12, verticalAlign: 'middle' }} /> {property.location}
+                          </div>
+                        </div>
+                        <CheckCircle className="admin-recent-check" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="admin-card admin-recently-card">
+              <div className="admin-card-header">
+                <span className="admin-card-title">Recently Added Properties</span>
+              </div>
+              <div className="adm-table-wrap">
+                <table className="adm-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Location</th>
+                      <th style={{ textAlign: 'right' }}>Price</th>
+                      <th>Status</th>
+                      <th>Added</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentlyAdded.map((property) => (
+                      <tr key={property.id}>
+                        <td>
+                          <div className="adm-property-cell">
+                            <img src={property.imageUrl} alt="" className="adm-property-thumb" />
+                            <div className="adm-property-name">{property.title}</div>
+                          </div>
+                        </td>
+                        <td>{property.location}</td>
+                        <td className="adm-price">MMK {property.price.toLocaleString()}</td>
+                        <td>{statusBadge(property.approvalStatus)}</td>
+                        <td className="admin-cell-date">{formatDate(property.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="admin-quick-grid">
+              <Link to="/admin/manage-all?tab=properties" className="admin-quick-card">
+                <div className="admin-quick-icon green"><CheckCircle /></div>
+                <div>
+                  <div className="admin-quick-title">Approved Listings</div>
+                  <div className="admin-quick-sub">{approved.length} live on the site</div>
+                </div>
+              </Link>
+              <Link to="/admin/dashboard" className="admin-quick-card">
+                <div className="admin-quick-icon amber"><Clock /></div>
+                <div>
+                  <div className="admin-quick-title">Pending Approvals</div>
+                  <div className="admin-quick-sub">{pending.length} awaiting review</div>
+                </div>
+              </Link>
+              <Link to="/admin/manage-all?tab=users" className="admin-quick-card">
+                <div className="admin-quick-icon blue"><Users /></div>
+                <div>
+                  <div className="admin-quick-title">Manage Users</div>
+                  <div className="admin-quick-sub">5 registered</div>
+                </div>
+              </Link>
+              <Link to="/admin/manage-all?tab=properties" className="admin-quick-card">
+                <div className="admin-quick-icon violet"><Home /></div>
+                <div>
+                  <div className="admin-quick-title">Manage Properties</div>
+                  <div className="admin-quick-sub">{properties.length} total listings</div>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Review Property Modal */}
+      {reviewing && (
+        <div className="dash-modal-overlay" onClick={() => setReviewing(null)}>
+          <div className="dash-modal admin-review-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="dash-modal-header">
+              <span className="dash-modal-title">Review Property</span>
+              <button className="dash-modal-close" onClick={() => setReviewing(null)} aria-label="Close">
+                <X />
+              </button>
+            </div>
+            <div className="admin-review-body">
+              {reviewing.imageUrl ? (
+                <img src={reviewing.imageUrl} alt={reviewing.title} className="admin-review-thumb" />
+              ) : (
+                <div className="admin-review-thumb admin-review-thumb-fallback"><Home /></div>
+              )}
+              <div className="admin-review-title-row">
+                <div className="admin-review-title">{reviewing.title}</div>
+                <div className="admin-pending-price">MMK {reviewing.price.toLocaleString()}</div>
+              </div>
+              <div className="admin-review-loc">
+                <MapPin style={{ width: 14, height: 14, verticalAlign: 'middle' }} /> {reviewing.location}
+              </div>
+              <div className="admin-review-grid">
+                <div className="admin-review-cell">
+                  <Bed /> {reviewing.bedrooms} beds
+                </div>
+                <div className="admin-review-cell">
+                  <Bath /> {reviewing.bathrooms} baths
+                </div>
+                <div className="admin-review-cell">
+                  <Square /> {reviewing.area.toLocaleString()} sqft
+                </div>
+                <div className="admin-review-cell">
+                  <Home /> {reviewing.propertyType.toLowerCase()}
+                </div>
+              </div>
+              <div className="admin-review-meta">
+                <div className="admin-review-meta-item">
+                  <span className="admin-review-label">Owner</span>
+                  <span className="admin-review-value">{reviewing.owner} · {reviewing.ownerPhone || '—'}</span>
+                </div>
+                <div className="admin-review-meta-item">
+                  <span className="admin-review-label">Listing Type</span>
+                  <span className="admin-review-value">
+                    {reviewing.status === 'FOR_SALE' ? 'For Sale' : 'For Rent'}
+                  </span>
+                </div>
+                <div className="admin-review-meta-item">
+                  <span className="admin-review-label">Submitted</span>
+                  <span className="admin-review-value">{formatDate(reviewing.createdAt)}</span>
+                </div>
+              </div>
+              <div className="admin-review-desc">
+                <span className="admin-review-label">Description</span>
+                <p>{reviewing.description}</p>
+              </div>
+            </div>
+            <div className="admin-review-actions">
+              <button onClick={() => handleReject(reviewing.id)} className="admin-btn-reject">
+                <XCircle /> Reject Listing
+              </button>
+              <button onClick={() => handleApprove(reviewing.id)} className="admin-btn-approve">
+                <CheckCircle /> Approve Listing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,20 +1,47 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Edit, Trash2, Heart, MapPin, Bed, Bath, Square, Plus, Home, Clock, CheckCircle, XCircle, Eye } from 'lucide-react';
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
+  Heart,
+  MapPin,
+  Home,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Eye,
+  Mail,
+  Phone,
+  User,
+  Plus,
+  X,
+  Building2,
+  Camera,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import type { Property } from '../types';
-
-const DEMO_MY_PROPERTIES: Property[] = [
-  { id: 1, title: 'Luxury Apartment in Bahan', description: 'Beautiful apartment', price: 250000, location: 'Bahan', propertyType: 'APARTMENT', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 3, bathrooms: 2, area: 1800, imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-01T00:00:00Z' },
-  { id: 2, title: 'Modern Villa in Dagon', description: 'Spacious villa', price: 850000, location: 'Dagon', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'PENDING', bedrooms: 5, bathrooms: 4, area: 4200, imageUrl: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-05T00:00:00Z' },
-  { id: 3, title: 'Cozy Condo in Mayangone', description: 'Nice condo', price: 180000, location: 'Mayangone', propertyType: 'CONDO', status: 'FOR_SALE', approvalStatus: 'REJECTED', bedrooms: 2, bathrooms: 2, area: 1200, imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-03T00:00:00Z' },
-];
+import { useFavorites } from '../contexts/FavoritesContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useProperties } from '../contexts/PropertiesContext';
+import { MYANMAR_PROPERTIES } from '../data/myanmarProperties';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
+  const { favoriteIds, toggleFavorite } = useFavorites();
+  const { properties, deleteProperty } = useProperties();
+  const { language } = useLanguage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'properties' | 'favorites'>('properties');
-  const [myProperties, setMyProperties] = useState<Property[]>(DEMO_MY_PROPERTIES);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editEmail, setEditEmail] = useState(user?.email || '');
+  const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [editPassword, setEditPassword] = useState('');
+  const [editConfirm, setEditConfirm] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const myProperties = properties.filter((p) => p.owner === user?.username);
+  const favoriteProperties = MYANMAR_PROPERTIES.filter((p) => favoriteIds.includes(p.id));
 
   const stats = {
     total: myProperties.length,
@@ -25,145 +52,397 @@ export function Dashboard() {
 
   const handleDelete = (id: number) => {
     if (confirm('Are you sure you want to delete this property?')) {
-      setMyProperties(myProperties.filter(p => p.id !== id));
+      deleteProperty(id);
     }
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please choose an image file (PNG or JPG).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateProfile({ avatar: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const openEditModal = () => {
+    setEditEmail(user?.email || '');
+    setEditPhone(user?.phone || '');
+    setEditPassword('');
+    setEditConfirm('');
+    setPasswordError('');
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = () => {
+    if (editPassword || editConfirm) {
+      if (editPassword.length < 6) {
+        setPasswordError('Password must be at least 6 characters.');
+        return;
+      }
+      if (editPassword !== editConfirm) {
+        setPasswordError('Passwords do not match.');
+        return;
+      }
+    }
+    updateProfile({
+      email: editEmail,
+      phone: editPhone,
+      ...(editPassword ? { password: editPassword } : {}),
+    });
+    setShowEditModal(false);
+    setEditPassword('');
+    setEditConfirm('');
+    setPasswordError('');
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'APPROVED': return <span className="badge badge-success"><CheckCircle className="w-3 h-3 mr-1" />Approved</span>;
-      case 'PENDING': return <span className="badge badge-warning"><Clock className="w-3 h-3 mr-1" />Pending</span>;
-      case 'REJECTED': return <span className="badge badge-error"><XCircle className="w-3 h-3 mr-1" />Rejected</span>;
-      default: return null;
+      case 'APPROVED':
+        return <span className="dash-badge approved"><CheckCircle />Approved</span>;
+      case 'PENDING':
+        return <span className="dash-badge pending"><Clock />Pending</span>;
+      case 'REJECTED':
+        return <span className="dash-badge rejected"><XCircle />Rejected</span>;
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-20 pb-12">
-      <div className="relative h-48 sm:h-64 bg-gradient-to-r from-blue-600 to-blue-800 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80')] bg-cover bg-center mix-blend-overlay opacity-20"></div>
-        <div className="section-container relative h-full flex items-end pb-6">
-          <div className="flex items-end gap-4">
-            <img
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`}
-              alt={user?.username}
-              className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl border-4 border-white shadow-lg object-cover"
-            />
-            <div className="pb-2">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-bold text-white">{user?.username}</h1>
-                <span className={`badge ${user?.role === 'ADMIN' ? 'bg-violet-500 text-white' : 'bg-blue-500 text-white'}`}>
-                  {user?.role}
+    <div className="dash-page">
+      <div className="dash-container">
+        <button className="dash-back-btn" onClick={() => navigate('/')}>
+          <ArrowLeft /> Back to Home
+        </button>
+
+        {/* Profile Hero */}
+        <div className="dash-hero">
+          <div className="dash-cover" />
+          <div className="dash-profile-row">
+            <div className="dash-avatar-wrap" onClick={() => fileInputRef.current?.click()}>
+              <div className="dash-avatar">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user.username} />
+                ) : (
+                  (user?.username || 'U').charAt(0).toUpperCase()
+                )}
+              </div>
+              <div className="dash-avatar-camera">
+                <Camera />
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={handleAvatarUpload}
+                hidden
+              />
+            </div>
+            <div className="dash-profile-info">
+              <div className="dash-profile-name-row">
+                <span className="dash-username">{user?.username}</span>
+                <span className={`dash-role-badge ${user?.role === 'ADMIN' ? 'admin' : ''}`}>
+                  {user?.role || 'USER'}
                 </span>
               </div>
-              <p className="text-blue-100 text-sm sm:text-base">{user?.email}</p>
+              <div className="dash-details-row">
+                <span className="dash-detail-item"><Mail />{user?.email}</span>
+                <span className="dash-detail-item"><Phone />{user?.phone || 'No phone added'}</span>
+              </div>
+            </div>
+            <button className="dash-edit-profile-btn" onClick={openEditModal}>
+              <User /> Edit Profile
+            </button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="dash-stats-grid">
+          <div className="dash-stat-card">
+            <div className="dash-stat-icon blue"><Home /></div>
+            <div>
+              <div className="dash-stat-value">{stats.total}</div>
+              <div className="dash-stat-label">Total Posted</div>
+            </div>
+          </div>
+          <div className="dash-stat-card">
+            <div className="dash-stat-icon green"><CheckCircle /></div>
+            <div>
+              <div className="dash-stat-value">{stats.active}</div>
+              <div className="dash-stat-label">Active Listings</div>
+            </div>
+          </div>
+          <div className="dash-stat-card">
+            <div className="dash-stat-icon amber"><Clock /></div>
+            <div>
+              <div className="dash-stat-value">{stats.pending}</div>
+              <div className="dash-stat-label">Pending</div>
+            </div>
+          </div>
+          <div className="dash-stat-card">
+            <div className="dash-stat-icon red"><XCircle /></div>
+            <div>
+              <div className="dash-stat-value">{stats.rejected}</div>
+              <div className="dash-stat-label">Rejected</div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="section-container">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 -mt-8 relative z-10 mb-8">
-          <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6 text-center">
-            <Home className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-            <p className="text-sm text-slate-500">Total Posted</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6 text-center">
-            <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-slate-800">{stats.active}</p>
-            <p className="text-sm text-slate-500">Active Listings</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6 text-center">
-            <Clock className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-slate-800">{stats.pending}</p>
-            <p className="text-sm text-slate-500">Pending</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6 text-center">
-            <XCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-slate-800">{stats.rejected}</p>
-            <p className="text-sm text-slate-500">Rejected</p>
-          </div>
+        {/* Tabs */}
+        <div className="dash-tabs">
+          <button
+            className={`dash-tab ${activeTab === 'properties' ? 'active' : ''}`}
+            onClick={() => setActiveTab('properties')}
+          >
+            <Home /> My Properties ({myProperties.length})
+          </button>
+          <button
+            className={`dash-tab ${activeTab === 'favorites' ? 'active' : ''}`}
+            onClick={() => setActiveTab('favorites')}
+          >
+            <Heart /> Saved Favorites ({favoriteProperties.length})
+          </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-          <div className="flex border-b border-slate-100">
-            <button
-              onClick={() => setActiveTab('properties')}
-              className={`flex-1 py-4 px-6 font-semibold text-sm transition-colors ${activeTab === 'properties' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              My Properties ({myProperties.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('favorites')}
-              className={`flex-1 py-4 px-6 font-semibold text-sm transition-colors ${activeTab === 'favorites' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              Saved Favorites (0)
-            </button>
-          </div>
+        {activeTab === 'properties' ? (
+          <>
+            <div className="dash-toolbar">
+              <div>
+                <div className="dash-toolbar-title">Listed Properties</div>
+                <div className="dash-toolbar-sub">Manage and track your posted listings</div>
+              </div>
+              <Link to="/property/add" className="dash-add-btn">
+                <Plus /> Add New Property
+              </Link>
+            </div>
 
-          <div className="p-6">
-            {activeTab === 'properties' ? (
-              <div className="space-y-4">
-                <div className="flex justify-end mb-4">
-                  <Link to="/property/add" className="btn-primary flex items-center gap-2">
-                    <Plus className="w-5 h-5" /> Add New Property
+            {myProperties.length === 0 ? (
+              <div className="dash-table">
+                <div className="dash-empty">
+                  <div className="dash-empty-icon"><Building2 /></div>
+                  <div className="dash-empty-title">No properties yet</div>
+                  <div className="dash-empty-desc">Post your first listing and it will show up here.</div>
+                  <Link to="/property/add" className="dash-empty-btn">
+                    <Plus /> Add Your First Property
                   </Link>
                 </div>
-                {myProperties.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Home className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500 mb-4">No properties yet</p>
-                    <Link to="/property/add" className="btn-primary">Add Your First Property</Link>
-                  </div>
-                ) : (
-                  myProperties.map((property) => (
-                    <div key={property.id} className="flex flex-col sm:flex-row gap-4 p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
-                      <img src={property.imageUrl} alt={property.title} className="w-full sm:w-32 h-24 object-cover rounded-lg" />
-                      <div className="flex-1">
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                          <div>
-                            <h3 className="font-bold text-slate-800">{property.title}</h3>
-                            <p className="text-sm text-slate-500 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> {property.location}
-                            </p>
-                          </div>
-                          <p className="font-bold text-blue-600">K {property.price.toLocaleString()}</p>
-                        </div>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                          <span className="flex items-center gap-1"><Bed className="w-4 h-4" /> {property.bedrooms}</span>
-                          <span className="flex items-center gap-1"><Bath className="w-4 h-4" /> {property.bathrooms}</span>
-                          <span className="flex items-center gap-1"><Square className="w-4 h-4" /> {property.area?.toLocaleString()} sqft</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-3">
-                          {getStatusBadge(property.approvalStatus)}
-                          <div className="flex items-center gap-2">
-                            <Link to={`/property/${property.id}`} className="p-2 rounded-lg hover:bg-white transition-colors text-slate-600" aria-label="View">
-                              <Eye className="w-5 h-5" />
-                            </Link>
-                            <Link to={`/property/edit/${property.id}`} className="p-2 rounded-lg hover:bg-white transition-colors text-slate-600" aria-label="Edit">
-                              <Edit className="w-5 h-5" />
-                            </Link>
-                            <button onClick={() => handleDelete(property.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors text-red-600" aria-label="Delete">
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </div>
+              </div>
+            ) : (
+              <div className="dash-table">
+                <div className="dash-table-header">
+                  <span>Property</span>
+                  <span>Price</span>
+                  <span>Type</span>
+                  <span>Status</span>
+                  <span>Actions</span>
+                </div>
+                {myProperties.map((property) => (
+                  <div className="dash-table-row" key={property.id}>
+                    <div className="dash-property-cell">
+                      {property.imageUrl ? (
+                        <img src={property.imageUrl} alt={property.title} className="dash-property-thumb" />
+                      ) : (
+                        <div className="dash-property-thumb-fallback"><Building2 /></div>
+                      )}
+                      <div className="dash-property-info">
+                        <div className="dash-property-name">{property.title}</div>
+                        <div className="dash-property-loc">
+                          <MapPin /> {property.location}
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Heart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500 mb-4">No saved favorites yet</p>
-                <Link to="/" className="btn-primary">Browse Properties</Link>
+                    <div className="dash-price">MMK {property.price.toLocaleString()}</div>
+                    <div>
+                      <span className="dash-type-chip">{property.propertyType.toLowerCase()}</span>
+                    </div>
+                    <div>{getStatusBadge(property.approvalStatus)}</div>
+                    <div className="dash-row-actions">
+                      <Link to={`/property/${property.id}`} className="dash-icon-btn" aria-label="View">
+                        <Eye />
+                      </Link>
+                      <Link to={`/property/edit/${property.id}`} className="dash-icon-btn" aria-label="Edit">
+                        <Edit />
+                      </Link>
+                      <button onClick={() => handleDelete(property.id)} className="dash-icon-btn danger" aria-label="Delete">
+                        <Trash2 />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
+          </>
+        ) : (
+          <div className="dash-table">
+            {favoriteProperties.length === 0 ? (
+              <div className="dash-empty">
+                <div className="dash-empty-icon"><Heart /></div>
+                <div className="dash-empty-title">No saved favorites yet</div>
+                <div className="dash-empty-desc">You can browse and like properties to keep track of them here.</div>
+                <Link to="/" className="dash-empty-btn">
+                  Browse Properties
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div className="dash-table-header">
+                  <span>Property</span>
+                  <span>Price</span>
+                  <span>Type</span>
+                  <span>Status</span>
+                  <span>Actions</span>
+                </div>
+                {favoriteProperties.map((property) => (
+                  <div className="dash-table-row" key={property.id}>
+                    <div className="dash-property-cell">
+                      {property.image ? (
+                        <img src={property.image} alt={property.titleEn} className="dash-property-thumb" />
+                      ) : (
+                        <div className="dash-property-thumb-fallback"><Building2 /></div>
+                      )}
+                      <div className="dash-property-info">
+                        <div className="dash-property-name">{language === 'my' ? property.titleMy : property.titleEn}</div>
+                        <div className="dash-property-loc">
+                          <MapPin /> {language === 'my' ? property.townshipMy : property.townshipEn}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="dash-price">MMK {property.price.toLocaleString()}</div>
+                    <div>
+                      <span className="dash-type-chip">{language === 'my' ? property.typeMy : property.typeEn}</span>
+                    </div>
+                    <div>
+                      <span className={`dash-badge ${property.badgeEn === 'For Sale' ? 'approved' : 'pending'}`}>
+                        {language === 'my' ? property.badgeMy : property.badgeEn}
+                      </span>
+                    </div>
+                    <div className="dash-row-actions">
+                      <Link to={`/property/${property.id}`} className="dash-icon-btn" aria-label="View">
+                        <Eye />
+                      </Link>
+                      <button
+                        onClick={() => toggleFavorite(property.id)}
+                        className="dash-icon-btn danger"
+                        aria-label="Remove from favorites"
+                        title="Remove from favorites"
+                      >
+                        <Trash2 />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div className="dash-modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="dash-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="dash-modal-header">
+              <span className="dash-modal-title">Edit Profile</span>
+              <button className="dash-modal-close" onClick={() => setShowEditModal(false)} aria-label="Close">
+                <X />
+              </button>
+            </div>
+            <div className="form-field">
+              <label className="form-label">Profile Photo</label>
+              <div className="dash-modal-avatar-row">
+                <div className="dash-avatar small">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={user.username} />
+                  ) : (
+                    (user?.username || 'U').charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="dash-modal-avatar-actions">
+                  <button
+                    type="button"
+                    className="dash-modal-btn save outline"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Camera /> Change Photo
+                  </button>
+                  {user?.avatar && (
+                    <button
+                      type="button"
+                      className="dash-modal-btn cancel"
+                      onClick={() => updateProfile({ avatar: '' })}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="form-field">
+              <label className="form-label">Username</label>
+              <input type="text" className="form-input" value={user?.username || ''} disabled />
+              <p className="form-hint">Usernames cannot be changed for security reasons.</p>
+            </div>
+            <div className="form-field">
+              <label className="form-label">Email</label>
+              <input
+                type="email"
+                className="form-input"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div className="form-field">
+              <label className="form-label">Phone</label>
+              <input
+                type="tel"
+                className="form-input"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="09-XXXXXXXXX"
+              />
+            </div>
+            <div className="form-field">
+              <label className="form-label">New Password</label>
+              <input
+                type="password"
+                className="form-input"
+                value={editPassword}
+                onChange={(e) => { setEditPassword(e.target.value); setPasswordError(''); }}
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="form-field">
+              <label className="form-label">Confirm New Password</label>
+              <input
+                type="password"
+                className={`form-input ${passwordError ? 'error' : ''}`}
+                value={editConfirm}
+                onChange={(e) => { setEditConfirm(e.target.value); setPasswordError(''); }}
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+              {passwordError ? (
+                <p className="form-error">{passwordError}</p>
+              ) : (
+                <p className="form-hint">Leave blank to keep your current password.</p>
+              )}
+            </div>
+            <div className="dash-modal-actions">
+              <button className="dash-modal-btn cancel" onClick={() => setShowEditModal(false)}>Cancel</button>
+              <button className="dash-modal-btn save" onClick={handleSaveProfile}>Save Changes</button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

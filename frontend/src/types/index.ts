@@ -4,6 +4,8 @@ export interface User {
   email: string;
   phone: string;
   role: 'USER' | 'ADMIN';
+  avatar?: string;
+  password?: string;
 }
 
 export interface AuthResponse {
@@ -13,6 +15,8 @@ export interface AuthResponse {
   email: string;
   phone: string;
   role: 'USER' | 'ADMIN';
+  avatar?: string;
+  password?: string;
 }
 
 export type PropertyType = 'APARTMENT' | 'HOUSE' | 'CONDO' | 'LAND' | 'TOWNHOUSE';
@@ -78,6 +82,7 @@ export interface MyanmarProperty {
   ownerEn: string;
   ownerMy: string;
   ownerAvatar: string;
+  ownerPhone: string;
   yearBuilt: number;
   images?: string[];
 }

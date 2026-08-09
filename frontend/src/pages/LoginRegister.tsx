@@ -147,7 +147,7 @@ export function LoginRegister() {
               </form>
 
               <p className="auth-terms">
-                By signing in, you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
+                By signing in, you agree to our <Link to="/terms">Terms</Link> and <Link to="/privacy">Privacy Policy</Link>.
               </p>
             </div>
           </div>
@@ -254,7 +254,7 @@ export function LoginRegister() {
                 onChange={(e) => setAgreeTerms(e.target.checked)}
               />
               <label htmlFor="agree">
-                I agree to UrbanNest's <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.
+                I agree to UrbanNest's <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>.
               </label>
             </div>
 

@@ -1,18 +1,21 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Heart, MapPin, Bed, Bath, Square, Car, Phone, MessageCircle, Star, ChevronLeft, ChevronRight, Copy, Mail, Save, Calendar } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Square, Car, Phone, MessageCircle, Star, ChevronLeft, ChevronRight, Copy, Mail, Calendar } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFavorites } from '../contexts/FavoritesContext';
 import { MYANMAR_PROPERTIES } from '../data/myanmarProperties';
 
 export function PropertyDetails() {
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated } = useAuth();
   const { language, t } = useLanguage();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [currentImage, setCurrentImage] = useState(0);
   const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'contact'>('overview');
 
   const property = MYANMAR_PROPERTIES.find((p) => p.id === id) || MYANMAR_PROPERTIES[0];
+  const isFav = isFavorite(property.id);
 
   const getName = () => language === 'my' ? property.titleMy : property.titleEn;
   const getAddress = () => language === 'my' ? property.addressMy : property.addressEn;
@@ -30,7 +33,7 @@ export function PropertyDetails() {
     ? ['စမတ်အိမ် စနစ်', 'Infinity Pool', 'ကိုယ်ပိုင် ဆိပ်ကမ်း', 'မီးဖိုချောင်', 'ရုံးခန်း', 'ဝိုင် Cellar', 'ကား ၃ စီး Garage', 'ပြင်ပ မီးဖိုချောင်']
     : ['Smart Home System', 'Infinity Pool', 'Private Dock', 'Gourmet Kitchen', 'Home Office', 'Wine Cellar', '3-Car Garage', 'Outdoor Kitchen'];
 
-  const priceFormatted = `K ${property.price.toLocaleString()}`;
+  const priceFormatted = `MMK ${property.price.toLocaleString()}`;
 
   return (
     <div className="property-detail-page">
@@ -203,7 +206,7 @@ export function PropertyDetails() {
               <div className="mortgage-title">{t('mortgageEstimate')}</div>
               <div className="mortgage-subtitle">{t('mortgageSubtitle')}</div>
               <div className="mortgage-amount-box">
-                <div className="mortgage-amount">K {Math.round(property.price * 0.005).toLocaleString()}</div>
+                <div className="mortgage-amount">MMK {Math.round(property.price * 0.005).toLocaleString()}</div>
                 <div className="mortgage-period">{t('perMonth')}</div>
               </div>
               <div className="mortgage-disclaimer">{t('estimateDisclaimer')}</div>
@@ -214,7 +217,17 @@ export function PropertyDetails() {
               <div className="share-btns">
                 <button className="share-btn"><Copy className="w-4 h-4" style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> {t('copyLink')}</button>
                 <button className="share-btn"><Mail className="w-4 h-4" style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> {t('email')}</button>
-                <button className="share-btn"><Save className="w-4 h-4" style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> {t('save')}</button>
+                <button
+                  className={`share-btn ${isFav ? 'saved' : ''}`}
+                  onClick={() => toggleFavorite(property.id)}
+                >
+                  <Heart
+                    className="w-4 h-4"
+                    style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}
+                    fill={isFav ? 'currentColor' : 'none'}
+                  />
+                  {isFav ? t('savedFavorites') : t('save')}
+                </button>
               </div>
             </div>
           </div>
@@ -233,7 +246,7 @@ export function PropertyDetails() {
                     </span>
                   </div>
                   <div className="home-card-body">
-                    <div className="home-card-price">K {prop.price.toLocaleString()}</div>
+                    <div className="home-card-price">MMK {prop.price.toLocaleString()}</div>
                     <div className="home-card-title">{language === 'my' ? prop.titleMy : prop.titleEn}</div>
                     <div className="home-card-address">
                       <MapPin className="w-4 h-4" /> {language === 'my' ? prop.addressMy : prop.addressEn}
