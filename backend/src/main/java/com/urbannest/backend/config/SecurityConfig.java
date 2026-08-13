@@ -39,9 +39,9 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/properties").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/properties/{id}").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/properties/mine").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/properties", "/api/properties/*").permitAll()
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())

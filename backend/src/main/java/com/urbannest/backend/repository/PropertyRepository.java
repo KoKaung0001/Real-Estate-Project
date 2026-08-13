@@ -19,11 +19,11 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     List<Property> findByApprovalStatus(ApprovalStatus approvalStatus);
 
     @Query("SELECT p FROM Property p WHERE p.approvalStatus = :approvalStatus " +
-           "AND (:keyword IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (CAST(:keyword AS string) IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) " +
+           "OR LOWER(p.description) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) " +
            "AND (:type IS NULL OR p.propertyType = :type) " +
            "AND (:status IS NULL OR p.status = :status) " +
-           "AND (:location IS NULL OR LOWER(p.location) LIKE LOWER(CONCAT('%', :location, '%'))) " +
+           "AND (CAST(:location AS string) IS NULL OR LOWER(p.location) LIKE LOWER(CONCAT('%', CAST(:location AS string), '%'))) " +
            "AND (:minPrice IS NULL OR p.price >= :minPrice) " +
            "AND (:maxPrice IS NULL OR p.price <= :maxPrice)")
     List<Property> searchProperties(
