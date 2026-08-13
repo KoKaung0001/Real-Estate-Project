@@ -1,73 +1,139 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { Property, ApprovalStatus } from '../types';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import type { Property, PropertyRequest } from '../types';
+import { propertyAPI } from '../utils/api';
+import { useAuth } from './AuthContext';
 
 interface PropertiesContextType {
   properties: Property[];
-  addProperty: (property: Omit<Property, 'id' | 'createdAt'>) => Property;
-  updateProperty: (id: number, updates: Partial<Property>) => void;
-  deleteProperty: (id: number) => void;
-  setApprovalStatus: (id: number, status: ApprovalStatus) => void;
+  myProperties: Property[];
+  loading: boolean;
+  error: string | null;
+  refreshProperties: () => Promise<void>;
+  refreshMyProperties: () => Promise<void>;
+  getPropertyById: (id: number) => Promise<Property>;
+  addProperty: (data: PropertyRequest) => Promise<Property>;
+  updateProperty: (id: number, data: PropertyRequest) => Promise<Property>;
+  deleteProperty: (id: number) => Promise<void>;
 }
 
 const PropertiesContext = createContext<PropertiesContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'urbannest-properties';
-
-const SEED_PROPERTIES: Property[] = [
-  { id: 1, title: 'Luxury Apartment in Bahan', description: 'Beautiful modern apartment in the heart of Bahan with city views.', price: 250000, location: 'Bahan', propertyType: 'APARTMENT', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 3, bathrooms: 2, area: 1800, imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-01T00:00:00Z' },
-  { id: 2, title: 'Modern Villa in Dagon', description: 'Spacious villa with a private garden and modern finishes.', price: 850000, location: 'Dagon', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 5, bathrooms: 4, area: 4200, imageUrl: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-05T00:00:00Z' },
-  { id: 3, title: 'Cozy Condo in Mayangone', description: 'Cozy two-bedroom condo close to schools and shopping.', price: 180000, location: 'Mayangone', propertyType: 'CONDO', status: 'FOR_SALE', approvalStatus: 'PENDING', bedrooms: 2, bathrooms: 2, area: 1200, imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80', owner: 'aung', ownerPhone: '09-222222222', createdAt: '2026-08-03T00:00:00Z' },
-  { id: 4, title: 'Family House in Hlaing', description: 'Comfortable family house with a big yard in Hlaing.', price: 320000, location: 'Hlaing', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'REJECTED', bedrooms: 4, bathrooms: 3, area: 2800, imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80', owner: 'kyaw', ownerPhone: '09-333333333', createdAt: '2026-08-02T00:00:00Z' },
-  { id: 5, title: 'Studio for Rent in Yankin', description: 'Compact studio apartment available for rent.', price: 800, location: 'Yankin', propertyType: 'APARTMENT', status: 'FOR_RENT', approvalStatus: 'APPROVED', bedrooms: 1, bathrooms: 1, area: 650, imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-04T00:00:00Z' },
-  { id: 6, title: 'Luxury Penthouse Suite', description: 'Premium penthouse with panoramic views of the city.', price: 2800000, location: 'Bahan', propertyType: 'APARTMENT', status: 'FOR_SALE', approvalStatus: 'PENDING', bedrooms: 4, bathrooms: 3, area: 3500, imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-07T00:00:00Z' },
-  { id: 7, title: 'Beachfront Villa', description: 'Luxury villa with direct beach access.', price: 3500000, location: 'Tamwe', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 6, bathrooms: 5, area: 5800, imageUrl: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800&q=80', owner: 'seller', ownerPhone: '09-987654321', createdAt: '2026-08-06T00:00:00Z' },
-  { id: 8, title: 'Mountain Retreat', description: 'Peaceful mountain retreat surrounded by nature.', price: 780000, location: 'Kamaryut', propertyType: 'HOUSE', status: 'FOR_SALE', approvalStatus: 'APPROVED', bedrooms: 3, bathrooms: 2, area: 1800, imageUrl: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80', owner: 'buyer', ownerPhone: '09-123456789', createdAt: '2026-08-08T00:00:00Z' },
-];
-
-function loadProperties(): Property[] {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      return JSON.parse(stored) as Property[];
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-    }
+function errorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = (error as { response?: { data?: { message?: string } } }).response;
+    if (response?.data?.message) return response.data.message;
   }
-  return SEED_PROPERTIES;
+  return error instanceof Error ? error.message : 'Unable to complete the request';
 }
 
 export function PropertiesProvider({ children }: { children: ReactNode }) {
-  const [properties, setProperties] = useState<Property[]>(loadProperties);
+  const { user, isAuthenticated } = useAuth();
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [myProperties, setMyProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pendingRequests = useRef(0);
+  const currentUserId = useRef<number | null>(null);
+  currentUserId.current = isAuthenticated ? user?.id ?? null : null;
+
+  const runRequest = useCallback(async <T,>(request: () => Promise<T>): Promise<T> => {
+    pendingRequests.current += 1;
+    setLoading(true);
+    setError(null);
+    try {
+      return await request();
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+      throw requestError;
+    } finally {
+      pendingRequests.current -= 1;
+      if (pendingRequests.current === 0) setLoading(false);
+    }
+  }, []);
+
+  const refreshProperties = useCallback(async () => {
+    const response = await runRequest(() => propertyAPI.search({}));
+    setProperties(response.data.filter((property) => property.approvalStatus === 'APPROVED'));
+  }, [runRequest]);
+
+  const refreshMyProperties = useCallback(async () => {
+    const requestedUserId = currentUserId.current;
+    if (requestedUserId === null) {
+      setMyProperties([]);
+      return;
+    }
+
+    const response = await runRequest(() => propertyAPI.getMine());
+    if (currentUserId.current === requestedUserId) setMyProperties(response.data);
+  }, [runRequest]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(properties));
-  }, [properties]);
+    refreshProperties().catch(() => undefined);
+  }, [refreshProperties]);
 
-  const addProperty = (property: Omit<Property, 'id' | 'createdAt'>) => {
-    const newProperty: Property = {
-      ...property,
-      id: Date.now(),
-      createdAt: new Date().toISOString(),
-    };
-    setProperties(prev => [newProperty, ...prev]);
-    return newProperty;
-  };
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      setMyProperties([]);
+      return;
+    }
+    refreshMyProperties().catch(() => undefined);
+  }, [isAuthenticated, user?.id, refreshMyProperties]);
 
-  const updateProperty = (id: number, updates: Partial<Property>) => {
-    setProperties(prev => prev.map(p => (p.id === id ? { ...p, ...updates } : p)));
-  };
+  const getPropertyById = useCallback(
+    async (id: number) => (await propertyAPI.getById(id)).data,
+    [],
+  );
 
-  const deleteProperty = (id: number) => {
-    setProperties(prev => prev.filter(p => p.id !== id));
-  };
+  const addProperty = useCallback(async (data: PropertyRequest) => {
+    const property = (await runRequest(() => propertyAPI.create(data))).data;
+    setMyProperties((current) => [property, ...current.filter((item) => item.id !== property.id)]);
+    setProperties((current) =>
+      property.approvalStatus === 'APPROVED'
+        ? [property, ...current.filter((item) => item.id !== property.id)]
+        : current.filter((item) => item.id !== property.id),
+    );
+    return property;
+  }, [runRequest]);
 
-  const setApprovalStatus = (id: number, status: ApprovalStatus) => {
-    setProperties(prev => prev.map(p => (p.id === id ? { ...p, approvalStatus: status } : p)));
-  };
+  const updateProperty = useCallback(async (id: number, data: PropertyRequest) => {
+    const property = (await runRequest(() => propertyAPI.update(id, data))).data;
+    setMyProperties((current) => current.map((item) => (item.id === id ? property : item)));
+    setProperties((current) =>
+      property.approvalStatus === 'APPROVED'
+        ? [property, ...current.filter((item) => item.id !== id)]
+        : current.filter((item) => item.id !== id),
+    );
+    return property;
+  }, [runRequest]);
+
+  const deleteProperty = useCallback(async (id: number) => {
+    await runRequest(() => propertyAPI.delete(id));
+    setMyProperties((current) => current.filter((property) => property.id !== id));
+    setProperties((current) => current.filter((property) => property.id !== id));
+  }, [runRequest]);
 
   return (
     <PropertiesContext.Provider
-      value={{ properties, addProperty, updateProperty, deleteProperty, setApprovalStatus }}
+      value={{
+        properties,
+        myProperties,
+        loading,
+        error,
+        refreshProperties,
+        refreshMyProperties,
+        getPropertyById,
+        addProperty,
+        updateProperty,
+        deleteProperty,
+      }}
     >
       {children}
     </PropertiesContext.Provider>

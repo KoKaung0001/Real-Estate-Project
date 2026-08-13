@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Users, Home, Search, Trash2, Eye, MapPin, Pencil, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProperties } from '../contexts/PropertiesContext';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { NotificationsBell } from '../components/NotificationsBell';
-import type { Property, User } from '../types';
+import { adminAPI } from '../utils/api';
+import type { Property, PropertyRequest, User } from '../types';
 
 const DEMO_USERS: User[] = [
   { id: 1, username: 'buyer', email: 'buyer@demo.com', phone: '09-123456789', role: 'USER' },
@@ -17,11 +18,14 @@ const DEMO_USERS: User[] = [
 
 export function AdminDataManagement() {
   const { user } = useAuth();
-  const { properties, updateProperty, deleteProperty } = useProperties();
+  const { refreshProperties } = useProperties();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') === 'properties' ? 'properties' : 'users';
   const [activeTab, setActiveTab] = useState<'users' | 'properties'>(initialTab);
   const [users, setUsers] = useState<User[]>(DEMO_USERS);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(true);
+  const [propertyError, setPropertyError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -29,6 +33,25 @@ export function AdminDataManagement() {
   const [userDraft, setUserDraft] = useState<User | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [propDraft, setPropDraft] = useState<Property | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    adminAPI.getAllProperties()
+      .then(({ data }) => {
+        if (active) setProperties(data);
+      })
+      .catch(() => {
+        if (active) setPropertyError('Unable to load properties.');
+      })
+      .finally(() => {
+        if (active) setPropertiesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredUsers = users.filter(
     (u) => u.username.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -43,9 +66,16 @@ export function AdminDataManagement() {
     setConfirmDelete(null);
   };
 
-  const handleDeleteProperty = (id: number) => {
-    deleteProperty(id);
-    setConfirmDelete(null);
+  const handleDeleteProperty = async (id: number) => {
+    setPropertyError('');
+    try {
+      await adminAPI.deleteProperty(id);
+      setProperties((prev) => prev.filter((property) => property.id !== id));
+      refreshProperties().catch(() => undefined);
+      setConfirmDelete(null);
+    } catch {
+      setPropertyError('Unable to delete the property.');
+    }
   };
 
   const openEditUser = (u: User) => {
@@ -65,11 +95,45 @@ export function AdminDataManagement() {
     setEditingProperty(p);
   };
 
-  const saveProperty = () => {
+  const saveProperty = async () => {
     if (!propDraft) return;
-    updateProperty(propDraft.id, propDraft);
-    setEditingProperty(null);
-    setPropDraft(null);
+
+    const request: PropertyRequest = {
+      title: propDraft.title,
+      description: propDraft.description,
+      price: propDraft.price,
+      location: propDraft.location,
+      propertyType: propDraft.propertyType,
+      status: propDraft.status,
+      bedrooms: propDraft.bedrooms,
+      bathrooms: propDraft.bathrooms,
+      area: propDraft.area,
+      imageUrl: propDraft.imageUrl,
+    };
+
+    setPropertyError('');
+    try {
+      const { data: updatedProperty } = await adminAPI.updateProperty(propDraft.id, request);
+
+      if (editingProperty && propDraft.approvalStatus !== editingProperty.approvalStatus) {
+        if (propDraft.approvalStatus === 'APPROVED') {
+          await adminAPI.approve(propDraft.id);
+        } else if (propDraft.approvalStatus === 'REJECTED') {
+          await adminAPI.reject(propDraft.id);
+        }
+      }
+
+      setProperties((prev) => prev.map((property) => (
+        property.id === propDraft.id
+          ? { ...updatedProperty, approvalStatus: propDraft.approvalStatus }
+          : property
+      )));
+      refreshProperties().catch(() => undefined);
+      setEditingProperty(null);
+      setPropDraft(null);
+    } catch (error) {
+      setPropertyError(error instanceof Error ? error.message : 'Unable to update the property.');
+    }
   };
 
   const setPropField = <K extends keyof Property>(key: K, value: Property[K]) => {
@@ -148,6 +212,12 @@ export function AdminDataManagement() {
                 />
               </div>
             </div>
+
+            {activeTab === 'properties' && (propertiesLoading || propertyError) && (
+              <div className="adm-title-sub">
+                {propertiesLoading ? 'Loading properties...' : propertyError}
+              </div>
+            )}
 
             <div className="adm-card">
               {activeTab === 'users' ? (
@@ -285,7 +355,7 @@ export function AdminDataManagement() {
                       </tbody>
                     </table>
                   </div>
-                  {filteredProperties.length === 0 && (
+                  {!propertiesLoading && filteredProperties.length === 0 && (
                     <div className="adm-empty">
                       <div className="adm-empty-icon"><Home /></div>
                       <div className="adm-empty-text">No properties found</div>
@@ -430,7 +500,7 @@ export function AdminDataManagement() {
                   value={propDraft.approvalStatus}
                   onChange={(e) => setPropField('approvalStatus', e.target.value as Property['approvalStatus'])}
                 >
-                  <option value="PENDING">Pending</option>
+                  {editingProperty.approvalStatus === 'PENDING' && <option value="PENDING">Pending</option>}
                   <option value="APPROVED">Approved</option>
                   <option value="REJECTED">Rejected</option>
                 </select>

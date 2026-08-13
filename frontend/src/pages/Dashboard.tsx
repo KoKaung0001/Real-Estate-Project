@@ -23,13 +23,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useProperties } from '../contexts/PropertiesContext';
-import { MYANMAR_PROPERTIES } from '../data/myanmarProperties';
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { user, updateProfile } = useAuth();
   const { favoriteIds, toggleFavorite } = useFavorites();
-  const { properties, deleteProperty } = useProperties();
+  const { properties, myProperties, deleteProperty } = useProperties();
   const { language } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'properties' | 'favorites'>('properties');
@@ -40,8 +39,7 @@ export function Dashboard() {
   const [editConfirm, setEditConfirm] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  const myProperties = properties.filter((p) => p.owner === user?.username);
-  const favoriteProperties = MYANMAR_PROPERTIES.filter((p) => favoriteIds.includes(p.id));
+  const favoriteProperties = properties.filter((property) => favoriteIds.includes(String(property.id)));
 
   const stats = {
     total: myProperties.length,
@@ -50,9 +48,9 @@ export function Dashboard() {
     rejected: myProperties.filter(p => p.approvalStatus === 'REJECTED').length,
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this property?')) {
-      deleteProperty(id);
+      await deleteProperty(id);
     }
   };
 
@@ -302,25 +300,31 @@ export function Dashboard() {
                 {favoriteProperties.map((property) => (
                   <div className="dash-table-row" key={property.id}>
                     <div className="dash-property-cell">
-                      {property.image ? (
-                        <img src={property.image} alt={property.titleEn} className="dash-property-thumb" />
+                      {property.imageUrl ? (
+                        <img src={property.imageUrl} alt={property.title} className="dash-property-thumb" />
                       ) : (
                         <div className="dash-property-thumb-fallback"><Building2 /></div>
                       )}
                       <div className="dash-property-info">
-                        <div className="dash-property-name">{language === 'my' ? property.titleMy : property.titleEn}</div>
+                        <div className="dash-property-name">{property.title}</div>
                         <div className="dash-property-loc">
-                          <MapPin /> {language === 'my' ? property.townshipMy : property.townshipEn}
+                          <MapPin /> {property.location}
                         </div>
                       </div>
                     </div>
                     <div className="dash-price">MMK {property.price.toLocaleString()}</div>
                     <div>
-                      <span className="dash-type-chip">{language === 'my' ? property.typeMy : property.typeEn}</span>
+                      <span className="dash-type-chip">
+                        {language === 'my'
+                          ? ({ APARTMENT: 'အခန်း', HOUSE: 'အိမ်', CONDO: 'ကွန်ဒို', LAND: 'မြေ', TOWNHOUSE: 'တိုက်ခန်း' }[property.propertyType])
+                          : property.propertyType.charAt(0) + property.propertyType.slice(1).toLowerCase()}
+                      </span>
                     </div>
                     <div>
-                      <span className={`dash-badge ${property.badgeEn === 'For Sale' ? 'approved' : 'pending'}`}>
-                        {language === 'my' ? property.badgeMy : property.badgeEn}
+                      <span className={`dash-badge ${property.status === 'FOR_SALE' ? 'approved' : 'pending'}`}>
+                        {property.status === 'FOR_SALE'
+                          ? (language === 'my' ? 'ရောင်းရန်' : 'For Sale')
+                          : (language === 'my' ? 'ငှားရန်' : 'For Rent')}
                       </span>
                     </div>
                     <div className="dash-row-actions">
@@ -328,7 +332,7 @@ export function Dashboard() {
                         <Eye />
                       </Link>
                       <button
-                        onClick={() => toggleFavorite(property.id)}
+                        onClick={() => toggleFavorite(String(property.id))}
                         className="dash-icon-btn danger"
                         aria-label="Remove from favorites"
                         title="Remove from favorites"

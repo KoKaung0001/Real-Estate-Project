@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect, type DragEvent, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Upload, X, MapPin, FileText, Image as ImageIcon, Home, Map, Camera, Building2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, X, MapPin, FileText, Home, Map, Camera, Building2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useProperties } from '../contexts/PropertiesContext';
 import { YANGON_TOWNSHIPS, FEATURES_EN, FEATURES_MY } from '../data/myanmarProperties';
-import type { Property, PropertyType, SaleStatus, User } from '../types';
+import type { Property, PropertyRequest, PropertyType, SaleStatus, User } from '../types';
 
 const PROPERTY_TYPES: { value: PropertyType; labelEn: string; labelMy: string }[] = [
   { value: 'APARTMENT', labelEn: 'Apartment', labelMy: 'အခန်း' },
@@ -86,7 +86,7 @@ const INITIAL_FORM: FormData = {
 };
 
 function formFromProperty(p: Property, user: User | null): FormData {
-  const tw = YANGON_TOWNSHIPS.find(t => t.nameEn.toLowerCase() === p.location.toLowerCase());
+  const tw = YANGON_TOWNSHIPS.find(t => p.location.toLowerCase().includes(t.nameEn.toLowerCase()));
   return {
     title: p.title,
     propertyType: p.propertyType,
@@ -97,7 +97,7 @@ function formFromProperty(p: Property, user: User | null): FormData {
     parking: 1,
     yearBuilt: '',
     area: String(p.area),
-    streetAddress: '',
+    streetAddress: p.location,
     city: 'Yangon',
     state: 'Yangon Region',
     zipCode: '',
@@ -120,14 +120,12 @@ function formFromProperty(p: Property, user: User | null): FormData {
 export function AddEditProperty() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { user } = useAuth();
-  const { properties, addProperty, updateProperty } = useProperties();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const additionalFileInputRef = useRef<HTMLInputElement>(null);
-
-  const existing = id ? properties.find((p) => String(p.id) === id) : undefined;
-  const isEditing = !!existing;
+  const { myProperties, loading: propertiesLoading, addProperty, updateProperty } = useProperties();
+  const existing = id ? myProperties.find((p) => String(p.id) === id) : undefined;
+  const isEditing = id !== undefined;
+  const populatedPropertyId = useRef<string | undefined>(undefined);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
@@ -142,6 +140,13 @@ export function AddEditProperty() {
           contactEmail: user?.email || '',
         }
   );
+
+  useEffect(() => {
+    if (existing && populatedPropertyId.current !== id) {
+      setFormData(formFromProperty(existing, user));
+      populatedPropertyId.current = id;
+    }
+  }, [existing, id, user]);
 
   const featureLabels = language === 'my' ? FEATURES_MY : FEATURES_EN;
   const isLand = formData.propertyType === 'LAND';
@@ -169,14 +174,13 @@ export function AddEditProperty() {
     }
 
     if (step === 2) {
-      if (!formData.township) newErrors.township = language === 'my' ? 'မြို့နယ် ရွေးပါ' : 'Township is required';
+      if (!formData.township && !existing) newErrors.township = language === 'my' ? 'မြို့နယ် ရွေးပါ' : 'Township is required';
       if (!formData.streetAddress.trim()) newErrors.streetAddress = language === 'my' ? 'လိပ်စာ ထည့်ပါ' : 'Street address is required';
     }
 
     if (step === 3) {
       if (!formData.description.trim()) newErrors.description = language === 'my' ? 'ဖော်ပြချက် ထည့်ပါ' : 'Description is required';
       if (formData.description.length > 2000) newErrors.description = language === 'my' ? 'ဖော်ပြချက် ၂၀၀၀ စာလုံးထက် မကျော်ရ' : 'Description must be under 2000 characters';
-      if (!formData.ownershipType) newErrors.ownershipType = language === 'my' ? 'ပိုင်ဆိုင်မှု အမျိုးအစား ရွေးပါ' : 'Ownership type is required';
     }
 
     setErrors(newErrors);
@@ -191,71 +195,6 @@ export function AddEditProperty() {
 
   const handlePrev = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
-  };
-
-  const handleFeatureToggle = (feature: string) => {
-    const updated = formData.features.includes(feature)
-      ? formData.features.filter(f => f !== feature)
-      : [...formData.features, feature];
-    updateForm({ features: updated });
-  };
-
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        setErrors({ imageUrl: language === 'my' ? 'ဖိုင်အရွယ်အစား 10MB ထက် မကြီးရ' : 'File size must be under 10MB' });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        updateForm({ imageUrl: ev.target?.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAdditionalImagesUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const validFiles = files.filter(f => f.size <= 10 * 1024 * 1024).slice(0, 20 - formData.additionalImages.length);
-
-    validFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setFormData(prev => ({
-          ...prev,
-          additionalImages: [...prev.additionalImages, ev.target?.result as string],
-        }));
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removeAdditionalImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      additionalImages: prev.additionalImages.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleDrop = (e: DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      if (file.size > 10 * 1024 * 1024) {
-        setErrors({ imageUrl: language === 'my' ? 'ဖိုင်အရွယ်အစား 10MB ထက် မကြီးရ' : 'File size must be under 10MB' });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        updateForm({ imageUrl: ev.target?.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleDragOver = (e: DragEvent) => {
-    e.preventDefault();
   };
 
   const handleFormKeyDown = (e: React.KeyboardEvent) => {
@@ -276,34 +215,53 @@ export function AddEditProperty() {
   const selectedTownship = YANGON_TOWNSHIPS.find(tw => tw.id === formData.township);
 
   const handleSubmit = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1200));
-
-    const location = selectedTownship ? selectedTownship.nameEn : formData.city || 'Yangon';
-    const payload: Omit<Property, 'id' | 'createdAt'> = {
-      title: formData.title,
-      description: formData.description,
-      price: Number(formData.price) || 0,
-      location,
-      propertyType: (formData.propertyType || 'APARTMENT') as PropertyType,
-      status: formData.status,
-      approvalStatus: existing?.approvalStatus ?? 'PENDING',
-      bedrooms: formData.bedrooms,
-      bathrooms: formData.bathrooms,
-      area: Number(formData.area) || 0,
-      imageUrl: formData.imageUrl,
-      owner: existing?.owner ?? user?.username ?? 'seller',
-      ownerPhone: formData.contactPhone || user?.phone || '',
-    };
-
-    if (existing) {
-      updateProperty(existing.id, payload);
-    } else {
-      addProperty(payload);
+    if (isEditing && !existing) {
+      setErrors({ submit: language === 'my' ? 'ပြင်ဆင်ရန် အိမ်ခြံမြေကို ရှာမတွေ့ပါ' : 'Property not found or you do not own it.' });
+      return;
     }
 
-    setSubmitted(true);
-    setLoading(false);
+    setLoading(true);
+    setErrors({});
+
+    try {
+      const originalTownship = existing
+        ? YANGON_TOWNSHIPS.find((township) => existing.location.toLowerCase().includes(township.nameEn.toLowerCase()))
+        : undefined;
+      const locationUnchanged = existing
+        && formData.streetAddress.trim() === existing.location
+        && formData.township === (originalTownship?.id ?? '');
+      const location = locationUnchanged
+        ? existing.location
+        : [formData.streetAddress.trim(), selectedTownship?.nameEn].filter(Boolean).join(', ');
+      const payload: PropertyRequest = {
+        title: formData.title,
+        description: formData.description,
+        price: Number(formData.price) || 0,
+        location,
+        propertyType: (formData.propertyType || 'APARTMENT') as PropertyType,
+        status: formData.status,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        area: Number(formData.area) || 0,
+        imageUrl: formData.imageUrl,
+      };
+
+      if (existing) {
+        await updateProperty(existing.id, payload);
+      } else {
+        await addProperty(payload);
+      }
+
+      setSubmitted(true);
+    } catch (error) {
+      setErrors({
+        submit: error instanceof Error
+          ? error.message
+          : (language === 'my' ? 'အိမ်ခြံမြေကို သိမ်းဆည်း၍ မရပါ' : 'Unable to save the property.'),
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatPrice = (price: string): string => {
@@ -371,6 +329,11 @@ export function AddEditProperty() {
             ? 'သင့်အိမ်ခြံမြေကို စာရင်းတင်ရန် အောက်ပါဖောင်ကို ဖြည့်ပါ'
             : 'Complete the form below to list your property on UrbanNest'}
         </p>
+        {isEditing && !propertiesLoading && !existing && (
+          <p className="form-error">
+            {language === 'my' ? 'ပြင်ဆင်ရန် အိမ်ခြံမြေကို ရှာမတွေ့ပါ' : 'Property not found or you do not own it.'}
+          </p>
+        )}
 
         <div className="step-indicator">
           <div className="step-indicator-progress" style={{ transform: getProgressTransform() }} />
@@ -509,7 +472,7 @@ export function AddEditProperty() {
                         <input
                           type="number"
                           value={formData.plotDimension}
-                          onChange={(e) => updateForm({ plotDimension: e.target.value })}
+                          disabled
                           className="form-input"
                           placeholder={language === 'my' ? 'ဥပမာ - 20' : 'e.g., 20'}
                           min="0"
@@ -521,7 +484,7 @@ export function AddEditProperty() {
                         </label>
                         <select
                           value={formData.landShape}
-                          onChange={(e) => updateForm({ landShape: e.target.value })}
+                          disabled
                           className="form-select"
                         >
                           <option value="">{language === 'my' ? 'ရွေးပါ' : 'Select'}</option>
@@ -538,7 +501,7 @@ export function AddEditProperty() {
                         <input
                           type="number"
                           value={formData.roadWidth}
-                          onChange={(e) => updateForm({ roadWidth: e.target.value })}
+                          disabled
                           className="form-input"
                           placeholder="30"
                           min="0"
@@ -582,7 +545,7 @@ export function AddEditProperty() {
                           </label>
                           <select
                             value={formData.parking}
-                            onChange={(e) => updateForm({ parking: Number(e.target.value) })}
+                            disabled
                             className="form-select"
                           >
                             {PARKING_OPTIONS.map((n) => (
@@ -597,7 +560,7 @@ export function AddEditProperty() {
                           <input
                             type="number"
                             value={formData.yearBuilt}
-                            onChange={(e) => updateForm({ yearBuilt: e.target.value })}
+                            disabled
                             className="form-input"
                             placeholder="2024"
                             min="1900"
@@ -641,6 +604,12 @@ export function AddEditProperty() {
                     </div>
                   </div>
 
+                  <p className="form-hint">
+                    {language === 'my'
+                      ? 'လက်ရှိ backend သည် လိပ်စာကို စာသားတစ်ခုအဖြစ်သာ သိမ်းဆည်းသည်။ မြို့၊ ပြည်နယ်/ဒေသနှင့် ZIP Code ကို သီးခြား မသိမ်းဆည်းနိုင်သေးပါ။'
+                      : 'The current backend stores one location value. City, state/region, and ZIP code are not persisted separately.'}
+                  </p>
+
                   <div className="form-grid-2">
                     <div className="form-field">
                       <label className="form-label">
@@ -668,7 +637,7 @@ export function AddEditProperty() {
                       <input
                         type="text"
                         value={formData.city}
-                        onChange={(e) => updateForm({ city: e.target.value })}
+                        disabled
                         className="form-input"
                         placeholder="Yangon"
                       />
@@ -683,7 +652,7 @@ export function AddEditProperty() {
                       <input
                         type="text"
                         value={formData.state}
-                        onChange={(e) => updateForm({ state: e.target.value })}
+                        disabled
                         className="form-input"
                         placeholder="Yangon Region"
                       />
@@ -696,7 +665,7 @@ export function AddEditProperty() {
                       <input
                         type="text"
                         value={formData.zipCode}
-                        onChange={(e) => updateForm({ zipCode: e.target.value })}
+                        disabled
                         className="form-input"
                         placeholder="11181"
                       />
@@ -776,12 +745,12 @@ export function AddEditProperty() {
 
                   <div className="form-field">
                     <label className="form-label">
-                      {language === 'my' ? 'ပိုင်ဆိုင်မှု အမျိုးအစား' : 'Ownership Type'} <span className="required">*</span>
+                      {language === 'my' ? 'ပိုင်ဆိုင်မှု အမျိုးအစား' : 'Ownership Type'}
                     </label>
                     <select
                       value={formData.ownershipType}
-                      onChange={(e) => updateForm({ ownershipType: e.target.value })}
-                      className={`form-select ${errors.ownershipType ? 'error' : ''}`}
+                      disabled
+                      className="form-select"
                     >
                       <option value="">{language === 'my' ? 'ပိုင်ဆိုင်မှု အမျိုးအစား ရွေးပါ' : 'Select Ownership Type'}</option>
                       {OWNERSHIP_TYPES.map((type) => (
@@ -790,9 +759,8 @@ export function AddEditProperty() {
                         </option>
                       ))}
                     </select>
-                    {errors.ownershipType && <p className="form-error">{errors.ownershipType}</p>}
                     <p className="form-hint">
-                      {language === 'my' ? 'ဥပမာ - Freehold, Leasehold, စသည်' : 'Example: Freehold, Leasehold, etc.'}
+                      {language === 'my' ? 'လက်ရှိ backend တွင် မသိမ်းဆည်းနိုင်သေးပါ။' : 'Not persisted by the current backend.'}
                     </p>
                   </div>
 
@@ -805,7 +773,7 @@ export function AddEditProperty() {
                         <button
                           key={index}
                           type="button"
-                          onClick={() => handleFeatureToggle(feature)}
+                          disabled
                           className={`feature-tag ${formData.features.includes(feature) ? 'active' : ''}`}
                         >
                           {feature}
@@ -825,7 +793,7 @@ export function AddEditProperty() {
                     <div className="docs-checks">
                       <button
                         type="button"
-                        onClick={() => updateForm({ hasGrant: !formData.hasGrant })}
+                        disabled
                         className={`doc-check ${formData.hasGrant ? 'is-checked' : ''}`}
                       >
                         <div className={`doc-checkbox ${formData.hasGrant ? 'checked' : ''}`}>
@@ -843,7 +811,7 @@ export function AddEditProperty() {
 
                       <button
                         type="button"
-                        onClick={() => updateForm({ hasPermit: !formData.hasPermit })}
+                        disabled
                         className={`doc-check ${formData.hasPermit ? 'is-checked' : ''}`}
                       >
                         <div className={`doc-checkbox ${formData.hasPermit ? 'checked' : ''}`}>
@@ -874,7 +842,7 @@ export function AddEditProperty() {
                         {language === 'my' ? 'ဓာတ်ပုံနှင့် ပြန်လည်သုံးသပ်ခြင်း' : 'Photos & Review'}
                       </h2>
                       <p className="form-section-desc">
-                        {language === 'my' ? 'သင့်အိမ်ခြံမြေ ဓာတ်ပုံများနှင့် နောက်ဆုံး ပြန်လည်သုံးသပ်ပါ' : 'Upload photos and review your listing'}
+                        {language === 'my' ? 'အဓိက ဓာတ်ပုံလင့်ခ်နှင့် နောက်ဆုံး ပြန်လည်သုံးသပ်ပါ' : 'Add a main image URL and review your listing'}
                       </p>
                     </div>
                   </div>
@@ -883,7 +851,14 @@ export function AddEditProperty() {
                     <label className="form-label">
                       {language === 'my' ? 'အဓိက ဓာတ်ပုံ' : 'Main Image'}
                     </label>
-                    {formData.imageUrl ? (
+                    <input
+                      type="url"
+                      className="form-input"
+                      placeholder="https://example.com/property.jpg"
+                      value={formData.imageUrl}
+                      onChange={(e) => updateForm({ imageUrl: e.target.value })}
+                    />
+                    {formData.imageUrl && (
                       <div className="image-preview">
                         <img src={formData.imageUrl} alt="Preview" />
                         <button
@@ -894,34 +869,7 @@ export function AddEditProperty() {
                           <X className="w-4 h-4" />
                         </button>
                       </div>
-                    ) : (
-                      <div
-                        onDrop={handleDrop}
-                        onDragOver={handleDragOver}
-                        onClick={() => fileInputRef.current?.click()}
-                        className="image-upload-zone"
-                      >
-                        <div className="image-upload-icon">
-                          <ImageIcon className="w-8 h-8" />
-                        </div>
-                        <p className="image-upload-title">
-                          {language === 'my' ? 'ဓာတ်ပုံကို ဒီမှာ ဆွဲထည့်ပါ' : 'Drag & drop photos here'}
-                        </p>
-                        <p className="image-upload-desc">
-                          JPG, PNG {language === 'my' ? 'တစ်ပုံလျှင် 10MB ထက်မကြီးရ · ဓာတ်ပုံ ၂၀ ပုံအထိ' : 'up to 10MB each · Max 20 photos'}
-                        </p>
-                        <button type="button" className="image-upload-btn">
-                          {language === 'my' ? 'ဖိုင်များ ရွေးပါ' : 'Browse Files'}
-                        </button>
-                      </div>
                     )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      style={{ display: 'none' }}
-                    />
                     {errors.imageUrl && <p className="form-error">{errors.imageUrl}</p>}
                   </div>
 
@@ -929,39 +877,9 @@ export function AddEditProperty() {
                     <label className="form-label">
                       {language === 'my' ? 'ထပ်ဆင့် ဓာတ်ပုံများ' : 'Additional Images'}
                     </label>
-                    <div className="additional-images-grid">
-                      {formData.additionalImages.map((img, index) => (
-                        <div key={index} className="additional-image-thumb">
-                          <img src={img} alt="" />
-                          <button
-                            type="button"
-                            onClick={() => removeAdditionalImage(index)}
-                            className="additional-image-remove"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                      {formData.additionalImages.length < 20 && (
-                        <div
-                          onClick={() => additionalFileInputRef.current?.click()}
-                          className="additional-upload-btn"
-                        >
-                          <Upload className="w-5 h-5 text-slate-400" />
-                          <span className="additional-upload-btn-text">
-                            {language === 'my' ? 'ထည့်ရန်' : 'Add'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <input
-                      ref={additionalFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleAdditionalImagesUpload}
-                      style={{ display: 'none' }}
-                    />
+                    <p className="form-section-desc">
+                      {language === 'my' ? 'လက်ရှိ backend သည် ဓာတ်ပုံတစ်ပုံလင့်ခ်သာ သိမ်းဆည်းနိုင်သည်။' : 'The current backend supports one image URL per property.'}
+                    </p>
                   </div>
 
                   <div className="summary-card" style={{ marginBottom: '16px' }}>
@@ -1058,7 +976,7 @@ export function AddEditProperty() {
                         <input
                           type="tel"
                           value={formData.contactPhone}
-                          onChange={(e) => updateForm({ contactPhone: e.target.value })}
+                          disabled
                           className="form-input"
                           placeholder="09-xxxxxxxxx"
                         />
@@ -1070,7 +988,7 @@ export function AddEditProperty() {
                         <input
                           type="email"
                           value={formData.contactEmail}
-                          onChange={(e) => updateForm({ contactEmail: e.target.value })}
+                          disabled
                           className="form-input"
                           placeholder="your@email.com"
                         />
@@ -1081,6 +999,7 @@ export function AddEditProperty() {
               )}
             </div>
 
+            {errors.submit && <p className="form-error">{errors.submit}</p>}
             <div className="form-footer">
               {currentStep > 1 ? (
                 <button type="button" onClick={handlePrev} className="form-btn-back">
@@ -1097,7 +1016,7 @@ export function AddEditProperty() {
                   <ArrowRight className="w-4 h-4" />
                 </button>
               ) : (
-                <button type="button" onClick={handleSubmit} className="form-btn-submit" disabled={loading}>
+                <button type="button" onClick={handleSubmit} className="form-btn-submit" disabled={loading || propertiesLoading || (isEditing && !existing)}>
                   {loading ? (
                     <span className="auth-loading" />
                   ) : (

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title description">
+  <title id="title">Property image unavailable</title>
+  <desc id="description">A neutral illustration of a house</desc>
+  <rect width="800" height="520" fill="#e2e8f0"/>
+  <rect y="390" width="800" height="130" fill="#cbd5e1"/>
+  <path d="M210 278 400 130l190 148v154H210z" fill="#f8fafc"/>
+  <path d="m165 292 235-183 235 183-35 45-200-156-200 156z" fill="#64748b"/>
+  <rect x="348" y="310" width="104" height="122" rx="4" fill="#94a3b8"/>
+  <rect x="250" y="304" width="70" height="65" rx="4" fill="#bfdbfe"/>
+  <rect x="480" y="304" width="70" height="65" rx="4" fill="#bfdbfe"/>
+</svg>

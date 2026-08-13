@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users,
@@ -20,6 +20,7 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { useProperties } from '../contexts/PropertiesContext';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { NotificationsBell } from '../components/NotificationsBell';
+import { adminAPI } from '../utils/api';
 import type { Property } from '../types';
 
 const formatDate = (iso: string) => {
@@ -33,8 +34,31 @@ const formatDate = (iso: string) => {
 export function AdminDashboard() {
   const { user } = useAuth();
   const { favoriteIds } = useFavorites();
-  const { properties, setApprovalStatus } = useProperties();
+  const { refreshProperties } = useProperties();
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [reviewing, setReviewing] = useState<Property | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    adminAPI.getAllProperties()
+      .then(({ data }) => {
+        if (active) setProperties(data);
+      })
+      .catch(() => {
+        if (active) setError('Unable to load properties.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const pending = properties.filter((p) => p.approvalStatus === 'PENDING');
   const approved = properties
@@ -53,14 +77,38 @@ export function AdminDashboard() {
     { icon: Heart, label: 'Total Favorites', value: favoriteIds.length.toString(), trend: '+8% this week', color: 'violet' },
   ];
 
-  const handleApprove = (id: number) => {
-    setApprovalStatus(id, 'APPROVED');
-    setReviewing(null);
+  const handleApprove = async (id: number) => {
+    setUpdatingId(id);
+    setError('');
+    try {
+      await adminAPI.approve(id);
+      setProperties((prev) => prev.map((property) => (
+        property.id === id ? { ...property, approvalStatus: 'APPROVED' } : property
+      )));
+      refreshProperties().catch(() => undefined);
+      setReviewing(null);
+    } catch {
+      setError('Unable to approve the property.');
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
-  const handleReject = (id: number) => {
-    setApprovalStatus(id, 'REJECTED');
-    setReviewing(null);
+  const handleReject = async (id: number) => {
+    setUpdatingId(id);
+    setError('');
+    try {
+      await adminAPI.reject(id);
+      setProperties((prev) => prev.map((property) => (
+        property.id === id ? { ...property, approvalStatus: 'REJECTED' } : property
+      )));
+      refreshProperties().catch(() => undefined);
+      setReviewing(null);
+    } catch {
+      setError('Unable to reject the property.');
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const statusBadge = (status: Property['approvalStatus']) => (
@@ -119,6 +167,10 @@ export function AdminDashboard() {
               </div>
             </div>
 
+            {(loading || error) && (
+              <div className="admin-header-sub">{loading ? 'Loading properties...' : error}</div>
+            )}
+
             <div className="admin-stats-grid">
               {stats.map((stat) => (
                 <div key={stat.label} className={`admin-stat-card ${stat.urgent ? 'urgent' : ''}`}>
@@ -173,10 +225,10 @@ export function AdminDashboard() {
                             <td className="admin-cell-date">{formatDate(property.createdAt)}</td>
                             <td>
                               <div className="admin-pending-actions">
-                                <button onClick={() => handleApprove(property.id)} className="admin-btn-approve">
+                                <button onClick={() => handleApprove(property.id)} className="admin-btn-approve" disabled={updatingId === property.id}>
                                   <CheckCircle /> Approve
                                 </button>
-                                <button onClick={() => handleReject(property.id)} className="admin-btn-reject">
+                                <button onClick={() => handleReject(property.id)} className="admin-btn-reject" disabled={updatingId === property.id}>
                                   <XCircle /> Reject
                                 </button>
                                 <button onClick={() => setReviewing(property)} className="admin-btn-view" aria-label="Review details" title="Review details">
@@ -348,10 +400,10 @@ export function AdminDashboard() {
               </div>
             </div>
             <div className="admin-review-actions">
-              <button onClick={() => handleReject(reviewing.id)} className="admin-btn-reject">
+              <button onClick={() => handleReject(reviewing.id)} className="admin-btn-reject" disabled={updatingId === reviewing.id}>
                 <XCircle /> Reject Listing
               </button>
-              <button onClick={() => handleApprove(reviewing.id)} className="admin-btn-approve">
+              <button onClick={() => handleApprove(reviewing.id)} className="admin-btn-approve" disabled={updatingId === reviewing.id}>
                 <CheckCircle /> Approve Listing
               </button>
             </div>

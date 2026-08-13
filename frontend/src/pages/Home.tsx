@@ -3,10 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, MapPin, Bed, Bath, Square, Heart, ArrowRight, Compass, Bell, Home as HomeIcon, ChevronDown, Building2, Landmark } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFavorites } from '../contexts/FavoritesContext';
-import { YANGON_TOWNSHIPS, MYANMAR_PROPERTIES } from '../data/myanmarProperties';
-import type { MyanmarProperty } from '../types';
+import { useProperties } from '../contexts/PropertiesContext';
+import { YANGON_TOWNSHIPS } from '../data/myanmarProperties';
+import type { Property } from '../types';
 
-const PROPERTY_TYPES = ['Apartment', 'House', 'Condo', 'Villa', 'Townhouse', 'Land'];
+const PROPERTY_TYPES = ['Apartment', 'House', 'Condo', 'Townhouse', 'Land'];
 
 const formatMMK = (value: number) => {
   if (value >= 1000000000) return `${(value / 1000000000).toFixed(1).replace(/\.0$/, '')}B MMK`;
@@ -21,47 +22,60 @@ const FEATURES = [
   { icon: Heart, titleEn: 'Save & Shortlist', titleMy: 'သိမ်းဆည်း စာရင်း', descEn: 'Save your favorite homes and compare them anytime from your dashboard.', descMy: 'နှစ်သက်ရာ အိမ်များကို သိမ်းဆည်းပြီး သင့် ဒက်ရှ်ဘုတ်မှ အချိန်မရွေး နှိုင်းယှဉ်ကြည့်နိုင်ပါသည်။' },
 ];
 
-function PropertyCard({ property, language }: { property: MyanmarProperty; language: string }) {
+function PropertyCard({ property, language }: { property: Property; language: string }) {
   const { isFavorite, toggleFavorite } = useFavorites();
-  const isFav = isFavorite(property.id);
-  const title = language === 'my' ? property.titleMy : property.titleEn;
-  const type = language === 'my' ? property.typeMy : property.typeEn;
-  const badge = language === 'my' ? property.badgeMy : property.badgeEn;
-  const isForRent = badge === 'For Rent' || badge === 'ငှားရန်';
+  const favoriteId = String(property.id);
+  const isFav = isFavorite(favoriteId);
+  const type = language === 'my'
+    ? ({ APARTMENT: 'အခန်း', HOUSE: 'အိမ်', CONDO: 'ကွန်ဒို', LAND: 'မြေ', TOWNHOUSE: 'တိုက်ခန်း' }[property.propertyType])
+    : property.propertyType.charAt(0) + property.propertyType.slice(1).toLowerCase();
+  const badge = property.status === 'FOR_RENT'
+    ? (language === 'my' ? 'ငှားရန်' : 'For Rent')
+    : (language === 'my' ? 'ရောင်းရန်' : 'For Sale');
+  const isForRent = property.status === 'FOR_RENT';
 
   return (
     <div className="property-card">
       <div className="property-image-wrapper">
-        <img src={property.image} alt={title} className="property-image" loading="lazy" />
+        <img
+          src={property.imageUrl?.startsWith('http') ? property.imageUrl : '/property-placeholder.svg'}
+          alt={property.title}
+          className="property-image"
+          loading="lazy"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = '/property-placeholder.svg';
+          }}
+        />
         <span className={`property-badge ${isForRent ? 'rent' : 'sale'}`}>{badge}</span>
-        <button onClick={() => toggleFavorite(property.id)} className="property-favorite" aria-label="Favorite">
+        <button onClick={() => toggleFavorite(favoriteId)} className="property-favorite" aria-label="Favorite">
           <Heart className={`w-5 h-5 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-400'}`} />
         </button>
       </div>
       <div className="property-info">
         <div className="property-info-top">
-          <h3 className="property-title">{title}</h3>
+          <h3 className="property-title">{property.title}</h3>
           <span className="property-type-badge">{type}</span>
         </div>
         <p className="property-address">
           <MapPin className="w-4 h-4" />
-          {language === 'my' ? property.addressMy : property.addressEn}
+          {property.location}
         </p>
         <div className="property-specs">
           <span className="property-spec">
-            <Bed className="w-4 h-4" /> {property.beds} beds
+            <Bed className="w-4 h-4" /> {property.bedrooms} {language === 'my' ? 'အိပ်ခန်း' : 'beds'}
           </span>
           <span className="property-spec">
-            <Bath className="w-4 h-4" /> {property.baths} baths
+            <Bath className="w-4 h-4" /> {property.bathrooms} {language === 'my' ? 'ရေချိုခန်း' : 'baths'}
           </span>
           <span className="property-spec">
-            <Square className="w-4 h-4" /> {property.sqft.toLocaleString()} sqft
+            <Square className="w-4 h-4" /> {property.area.toLocaleString()} {language === 'my' ? 'စတုရန်းပေ' : 'sqft'}
           </span>
         </div>
         <div className="property-footer">
-          <span className="property-price">MMK {property.price.toLocaleString()}</span>
+          <span className="property-price">{formatMMK(property.price)}</span>
           <Link to={`/property/${property.id}`} className="property-details-link">
-            View Details <ArrowRight className="w-4 h-4" />
+            {language === 'my' ? 'အသေးစိတ်ကြည့်ရန်' : 'View Details'} <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>
@@ -72,6 +86,7 @@ function PropertyCard({ property, language }: { property: MyanmarProperty; langu
 export function Home() {
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { properties, loading, error } = useProperties();
   const [listingType, setListingType] = useState('buy');
   const [selectedTown, setSelectedTown] = useState('');
   const [propertyType, setPropertyType] = useState('');
@@ -86,18 +101,25 @@ export function Home() {
   };
 
   const filteredProperties = useMemo(() => {
-    return MYANMAR_PROPERTIES.filter((property) => {
-      const matchesTown =
-        !selectedTown ||
-        property.townshipEn.toLowerCase() === selectedTown.toLowerCase() ||
-        property.townshipMy === selectedTown;
-      const matchesType = !propertyType || property.typeEn.toLowerCase() === propertyType.toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
+    const expectedStatus = listingType === 'rent' ? 'FOR_RENT' : 'FOR_SALE';
+    const selectedTownship = YANGON_TOWNSHIPS.find((town) => town.nameEn === selectedTown);
+
+    return properties.filter((property) => {
+      const matchesKeyword = !query || [property.title, property.description, property.location, property.propertyType]
+        .some((value) => value.toLowerCase().includes(query));
+      const matchesStatus = property.status === expectedStatus;
+      const location = property.location.toLowerCase();
+      const matchesTown = !selectedTown || !selectedTownship
+        || location.includes(selectedTownship.nameEn.toLowerCase())
+        || location.includes(selectedTownship.nameMy.toLowerCase());
+      const matchesType = !propertyType || property.propertyType === propertyType.toUpperCase();
       const min = minPrice ? Number(minPrice) : 0;
       const max = maxPrice ? Number(maxPrice) : Infinity;
       const matchesPrice = property.price >= min && property.price <= max;
-      return matchesTown && matchesType && matchesPrice;
+      return matchesKeyword && matchesStatus && matchesTown && matchesType && matchesPrice;
     });
-  }, [selectedTown, propertyType, minPrice, maxPrice]);
+  }, [properties, searchQuery, listingType, selectedTown, propertyType, minPrice, maxPrice]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,21 +264,28 @@ export function Home() {
           </Link>
         </div>
         <div className="properties-grid">
-          {filteredProperties.map((property) => (
+          {!loading && !error && filteredProperties.map((property) => (
             <PropertyCard key={property.id} property={property} language={language} />
           ))}
         </div>
-        {filteredProperties.length === 0 && (
+        {loading && <div className="no-results"><p className="no-results-title">{language === 'my' ? 'အိမ်ခြံမြေများ ရယူနေပါသည်...' : 'Loading properties...'}</p></div>}
+        {!loading && error && (
+          <div className="no-results">
+            <p className="no-results-title">{language === 'my' ? 'အိမ်ခြံမြေများ ရယူ၍ မရပါ' : 'Unable to load properties'}</p>
+            <p className="no-results-sub">{error}</p>
+          </div>
+        )}
+        {!loading && !error && filteredProperties.length === 0 && (
           <div className="no-results">
             <Search className="no-results-icon" />
-            <p className="no-results-title">No properties match your search</p>
-            <p className="no-results-sub">Try clearing the filters or choose another township.</p>
+            <p className="no-results-title">{language === 'my' ? 'သင့်ရှာဖွေမှုနှင့် ကိုက်ညီသော အိမ်ခြံမြေ မရှိပါ' : 'No properties match your search'}</p>
+            <p className="no-results-sub">{language === 'my' ? 'စစ်ထုတ်မှုများကို ရှင်းပါ သို့မဟုတ် အခြားမြို့နယ်ကို ရွေးပါ။' : 'Try clearing the filters or choose another township.'}</p>
             <button
               type="button"
               className="no-results-btn"
               onClick={() => { setSelectedTown(''); setPropertyType(''); setMinPrice(''); setMaxPrice(''); }}
             >
-              Clear Filters
+              {language === 'my' ? 'စစ်ထုတ်မှုများ ရှင်းပါ' : 'Clear Filters'}
             </button>
           </div>
         )}
