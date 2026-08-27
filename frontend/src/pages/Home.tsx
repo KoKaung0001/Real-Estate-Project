@@ -49,7 +49,11 @@ function PropertyCard({ property, language }: { property: Property; language: st
         />
         <span className={`property-badge ${isForRent ? 'rent' : 'sale'}`}>{badge}</span>
         <button onClick={() => toggleFavorite(favoriteId)} className="property-favorite" aria-label="Favorite">
-          <Heart className={`w-5 h-5 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-400'}`} />
+          <Heart
+            className="w-5 h-5"
+            color={isFav ? '#ef4444' : '#94a3b8'}
+            fill={isFav ? '#ef4444' : 'none'}
+          />
         </button>
       </div>
       <div className="property-info">
