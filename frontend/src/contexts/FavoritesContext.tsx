@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 interface FavoritesContextType {
   favoriteIds: string[];
@@ -8,12 +9,24 @@ interface FavoritesContextType {
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'urbannest-favorites';
+const STORAGE_KEY_PREFIX = 'urbannest-favorites';
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+
+  return (
+    <UserFavoritesProvider key={user?.id ?? 'anonymous'} userId={user?.id ?? null}>
+      {children}
+    </UserFavoritesProvider>
+  );
+}
+
+function UserFavoritesProvider({ children, userId }: { children: ReactNode; userId: number | null }) {
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
+    if (userId === null) return [];
+
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(`${STORAGE_KEY_PREFIX}-${userId}`);
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -21,8 +34,10 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(favoriteIds));
-  }, [favoriteIds]);
+    if (userId !== null) {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}-${userId}`, JSON.stringify(favoriteIds));
+    }
+  }, [favoriteIds, userId]);
 
   const isFavorite = (id: string) => favoriteIds.includes(id);
 
