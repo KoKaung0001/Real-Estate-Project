@@ -85,6 +85,7 @@ export interface YangonTownship {
   id: string;
   nameEn: string;
   nameMy: string;
+  aliases?: string[];
 }
 
 export interface MyanmarProperty {
