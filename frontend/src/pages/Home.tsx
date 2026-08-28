@@ -5,6 +5,7 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { useProperties } from '../contexts/PropertiesContext';
 import { YANGON_TOWNSHIPS } from '../data/myanmarProperties';
 import { filterProperties, parseOptionalPrice } from '../utils/propertyFilters';
+import { resolvePropertyImageUrl } from '../utils/imageUrl';
 import type { Property, PropertyType } from '../types';
 
 const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
@@ -40,7 +41,7 @@ function PropertyCard({ property }: { property: Property }) {
     <div className="property-card">
       <div className="property-image-wrapper">
         <img
-          src={property.imageUrl?.startsWith('http') ? property.imageUrl : '/property-placeholder.svg'}
+          src={resolvePropertyImageUrl(property.imageUrl)}
           alt={property.title}
           className="property-image"
           loading="lazy"

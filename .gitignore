@@ -45,5 +45,8 @@ replay_pid*.log
 ### Database backups ###
 *.backup
 
+### Runtime uploads ###
+backend/uploads/
+
 ### TypeScript build artifacts ###
 *.tsbuildinfo

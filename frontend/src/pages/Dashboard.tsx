@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProperties } from '../contexts/PropertiesContext';
+import { resolvePropertyImageUrl } from '../utils/imageUrl';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -243,7 +244,7 @@ export function Dashboard() {
                   <div className="dash-table-row" key={property.id}>
                     <div className="dash-property-cell">
                       {property.imageUrl ? (
-                        <img src={property.imageUrl} alt={property.title} className="dash-property-thumb" />
+                        <img src={resolvePropertyImageUrl(property.imageUrl)} alt={property.title} className="dash-property-thumb" />
                       ) : (
                         <div className="dash-property-thumb-fallback"><Building2 /></div>
                       )}
@@ -299,7 +300,7 @@ export function Dashboard() {
                   <div className="dash-table-row" key={property.id}>
                     <div className="dash-property-cell">
                       {property.imageUrl ? (
-                        <img src={property.imageUrl} alt={property.title} className="dash-property-thumb" />
+                        <img src={resolvePropertyImageUrl(property.imageUrl)} alt={property.title} className="dash-property-thumb" />
                       ) : (
                         <div className="dash-property-thumb-fallback"><Building2 /></div>
                       )}
