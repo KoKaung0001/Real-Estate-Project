@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFavorites } from '../contexts/FavoritesContext';
-import { useLanguage } from '../contexts/LanguageContext';
 import { useProperties } from '../contexts/PropertiesContext';
 
 export function Dashboard() {
@@ -29,7 +28,6 @@ export function Dashboard() {
   const { user, updateProfile } = useAuth();
   const { favoriteIds, toggleFavorite } = useFavorites();
   const { properties, myProperties, deleteProperty } = useProperties();
-  const { language } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'properties' | 'favorites'>('properties');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -315,16 +313,12 @@ export function Dashboard() {
                     <div className="dash-price">MMK {property.price.toLocaleString()}</div>
                     <div>
                       <span className="dash-type-chip">
-                        {language === 'my'
-                          ? ({ APARTMENT: 'အခန်း', HOUSE: 'အိမ်', CONDO: 'ကွန်ဒို', LAND: 'မြေ', TOWNHOUSE: 'တိုက်ခန်း' }[property.propertyType])
-                          : property.propertyType.charAt(0) + property.propertyType.slice(1).toLowerCase()}
+                        {property.propertyType.charAt(0) + property.propertyType.slice(1).toLowerCase()}
                       </span>
                     </div>
                     <div>
                       <span className={`dash-badge ${property.status === 'FOR_SALE' ? 'approved' : 'pending'}`}>
-                        {property.status === 'FOR_SALE'
-                          ? (language === 'my' ? 'ရောင်းရန်' : 'For Sale')
-                          : (language === 'my' ? 'ငှားရန်' : 'For Rent')}
+                        {property.status === 'FOR_SALE' ? 'For Sale' : 'For Rent'}
                       </span>
                     </div>
                     <div className="dash-row-actions">
