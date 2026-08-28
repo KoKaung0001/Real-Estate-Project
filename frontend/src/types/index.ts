@@ -22,6 +22,7 @@ export interface AuthResponse {
 export type PropertyType = 'APARTMENT' | 'HOUSE' | 'CONDO' | 'LAND' | 'TOWNHOUSE';
 export type SaleStatus = 'FOR_SALE' | 'FOR_RENT';
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type OwnershipType = 'FREEHOLD' | 'LEASEHOLD' | 'GOVERNMENT' | 'PERMIT' | 'OTHER';
 
 export interface Property {
   id: number;
@@ -35,6 +36,19 @@ export interface Property {
   bedrooms: number;
   bathrooms: number;
   area: number;
+  parking?: number | null;
+  yearBuilt?: number | null;
+  ownershipType?: OwnershipType | null;
+  streetAddress?: string | null;
+  township?: string | null;
+  city?: string | null;
+  stateRegion?: string | null;
+  zipCode?: string | null;
+  hasGrant?: boolean;
+  hasPermit?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  features?: string[];
   imageUrl: string;
   owner: string;
   ownerPhone: string;
@@ -51,6 +65,19 @@ export interface PropertyRequest {
   bedrooms: number;
   bathrooms: number;
   area: number;
+  parking?: number | null;
+  yearBuilt?: number | null;
+  ownershipType?: OwnershipType | null;
+  streetAddress?: string | null;
+  township?: string | null;
+  city?: string | null;
+  stateRegion?: string | null;
+  zipCode?: string | null;
+  hasGrant?: boolean;
+  hasPermit?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  features?: string[];
   imageUrl: string;
 }
 
