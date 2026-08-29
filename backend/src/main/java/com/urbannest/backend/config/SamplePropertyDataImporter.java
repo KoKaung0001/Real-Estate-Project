@@ -98,6 +98,8 @@ public class SamplePropertyDataImporter implements CommandLineRunner {
     private Property mapRow(Row row, DataFormatter formatter, User owner) {
         String title = cell(formatter, row, 0);
         String location = cell(formatter, row, 1);
+        SamplePropertyLocationResolver.StructuredLocation structuredLocation =
+                SamplePropertyLocationResolver.resolve(location).orElse(null);
         Double priceLakhs = numericCell(row, 2);
         Double area = numericCell(row, 3);
         String listingUrl = cell(formatter, row, 7);
@@ -123,6 +125,9 @@ public class SamplePropertyDataImporter implements CommandLineRunner {
                 .description("Imported local sample listing. Source: " + listingUrl)
                 .price(BigDecimal.valueOf(priceLakhs).multiply(LAKH_TO_MMK))
                 .location(location)
+                .township(structuredLocation == null ? null : structuredLocation.township())
+                .city(structuredLocation == null ? null : structuredLocation.city())
+                .stateRegion(structuredLocation == null ? null : structuredLocation.stateRegion())
                 .propertyType(PropertyType.APARTMENT)
                 .status(SaleStatus.FOR_SALE)
                 .approvalStatus(ApprovalStatus.APPROVED)
