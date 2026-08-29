@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,7 +79,10 @@ public class SamplePropertyDataImporter implements CommandLineRunner {
         List<Property> properties = new ArrayList<>();
         DataFormatter formatter = new DataFormatter();
 
-        try (Workbook workbook = WorkbookFactory.create(source.toFile())) {
+        // Opening an OOXML file directly gives POI a read/write package; closing it can
+        // rewrite ZIP metadata even though importing is logically read-only.
+        try (InputStream input = Files.newInputStream(source);
+             Workbook workbook = WorkbookFactory.create(input)) {
             Sheet sheet = workbook.getSheet("Cleaned House Data");
             if (sheet == null) {
                 throw new IllegalStateException("Worksheet 'Cleaned House Data' was not found");
