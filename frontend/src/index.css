@@ -506,7 +506,7 @@ body {
   border-radius: 16px;
   padding: 32px 40px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 32px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
@@ -1057,10 +1057,6 @@ body {
     font-size: 42px;
   }
   
-  .stats-card {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
   .properties-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1119,9 +1115,9 @@ body {
   }
   
   .stats-card {
-    grid-template-columns: repeat(2, 1fr);
-    padding: 24px;
-    gap: 24px;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 24px 12px;
+    gap: 12px;
   }
   
   .stat-value {
@@ -3210,6 +3206,43 @@ body {
   font-weight: 600;
   color: #1e293b;
   margin-bottom: 14px;
+}
+
+.listing-fee-card {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.listing-fee-label {
+  margin-bottom: 4px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.listing-fee-amount {
+  margin-bottom: 8px;
+  color: #1d4ed8;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.listing-fee-description,
+.listing-fee-note {
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.listing-fee-note {
+  margin-top: 4px;
+  color: #64748b;
 }
 
 /* Form Footer */

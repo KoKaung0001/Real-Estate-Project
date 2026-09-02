@@ -1133,6 +1133,19 @@ export function AddEditProperty() {
                       </div>
                     </div>
                   </div>
+
+                  {!isEditing && (
+                    <aside className="listing-fee-card" aria-labelledby="listing-fee-title">
+                      <p id="listing-fee-title" className="listing-fee-label">Listing Fee</p>
+                      <p className="listing-fee-amount">MMK 100,000</p>
+                      <p className="listing-fee-description">
+                        A one-time listing fee applies when submitting a new property.
+                      </p>
+                      <p className="listing-fee-note">
+                        Payment processing is not yet available in this version.
+                      </p>
+                    </aside>
+                  )}
                 </div>
               )}
             </div>

@@ -163,6 +163,9 @@ export function Home() {
     maxPrice: maxPriceValue,
     query: searchQuery,
   }), [properties, searchQuery, listingType, selectedTown, propertyType, minPriceValue, maxPriceValue]);
+  const approvedPropertyCount = properties.filter(
+    (property) => property.approvalStatus === 'APPROVED',
+  ).length;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,7 +181,7 @@ export function Home() {
         <div className="hero-content">
           <div className="hero-badge">
             <span className="hero-badge-dot"></span>
-            12,400+ active listings nationwide
+            {approvedPropertyCount} active {approvedPropertyCount === 1 ? 'listing' : 'listings'} in Yangon
           </div>
           <h1 className="hero-title">Find Your Perfect Home, Smarter.</h1>
           <p className="hero-subtitle">
@@ -277,20 +280,16 @@ export function Home() {
       <section className="stats-section">
         <div className="stats-card">
           <div className="stat-item">
-            <div className="stat-value">12,400+</div>
+            <div className="stat-value">{approvedPropertyCount}</div>
             <div className="stat-label">Active Listings</div>
           </div>
           <div className="stat-item">
-            <div className="stat-value">280</div>
-            <div className="stat-label">Cities Covered</div>
+            <div className="stat-value">1</div>
+            <div className="stat-label">City Covered</div>
           </div>
           <div className="stat-item">
-            <div className="stat-value">48K+</div>
+            <div className="stat-value">0</div>
             <div className="stat-label">Happy Buyers</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-value">3,200</div>
-            <div className="stat-label">Agent Partners</div>
           </div>
         </div>
       </section>
