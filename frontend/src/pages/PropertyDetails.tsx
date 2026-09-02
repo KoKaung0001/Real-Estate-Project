@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Heart, MapPin, Bed, Bath, Square, Phone, Copy } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Square, Copy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProperties } from '../contexts/PropertiesContext';
@@ -10,6 +10,66 @@ import type { Property } from '../types';
 
 const formatType = (propertyType: Property['propertyType']) =>
   propertyType.charAt(0) + propertyType.slice(1).toLowerCase();
+
+function PhoneNumberDisplay({ phoneNumber }: { phoneNumber?: string | null }) {
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+
+  useEffect(() => {
+    if (copyStatus === 'idle') return;
+
+    const timeoutId = window.setTimeout(() => setCopyStatus('idle'), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [copyStatus]);
+
+  const copyPhoneNumber = async () => {
+    if (!phoneNumber) return;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(phoneNumber);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = phoneNumber;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        try {
+          document.body.appendChild(textarea);
+          textarea.select();
+          if (!document.execCommand('copy')) {
+            throw new Error('Clipboard copy was not available');
+          }
+        } finally {
+          textarea.remove();
+        }
+      }
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('failed');
+    }
+  };
+
+  if (!phoneNumber) {
+    return <div className="phone-number-display phone-number-unavailable">Phone number unavailable</div>;
+  }
+
+  const feedback = copyStatus === 'copied' ? 'Copied' : copyStatus === 'failed' ? 'Copy failed' : '';
+
+  return (
+    <div className="phone-number-display">
+      <span className="phone-number-text">{phoneNumber}</span>
+      <button
+        type="button"
+        className={`phone-copy-btn ${copyStatus}`}
+        onClick={copyPhoneNumber}
+        aria-label="Copy phone number"
+        title={feedback || 'Copy phone number'}
+      >
+        <Copy className="w-4 h-4" aria-hidden="true" />
+        {feedback && <span aria-live="polite">{feedback}</span>}
+      </button>
+    </div>
+  );
+}
 
 export function PropertyDetails() {
   const { id } = useParams<{ id: string }>();
@@ -181,9 +241,7 @@ export function PropertyDetails() {
                   <h2 className="detail-section-title">Contact Owner</h2>
                   <div className="agent-info"><div className="agent-name">{property.owner}</div></div>
                   {isAuthenticated ? (
-                    <a href={`tel:${property.ownerPhone}`} className="agent-schedule-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
-                      <Phone className="w-5 h-5" /> {property.ownerPhone}
-                    </a>
+                    <PhoneNumberDisplay phoneNumber={property.ownerPhone} />
                   ) : (
                     <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '12px', textAlign: 'center' }}>
                       <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '12px' }}>Sign in to contact</p>
@@ -209,7 +267,7 @@ export function PropertyDetails() {
               <div className="agent-card-title">Listed By</div>
               <div className="agent-info"><div className="agent-name">{property.owner}</div></div>
               {isAuthenticated ? (
-                <div className="agent-contact-item"><Phone className="w-5 h-5" /><span>{property.ownerPhone}</span></div>
+                <PhoneNumberDisplay phoneNumber={property.ownerPhone} />
               ) : (
                 <Link to="/login" className="agent-schedule-btn" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>Sign in to contact</Link>
               )}

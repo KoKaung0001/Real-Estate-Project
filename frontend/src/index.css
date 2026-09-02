@@ -2085,21 +2085,73 @@ body {
   color: #64748b;
 }
 
-.agent-contact-item {
+.phone-number-display {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  min-width: 0;
+  padding: 10px 10px 10px 16px;
   background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
-  margin-bottom: 10px;
-  font-size: 14px;
-  color: #374151;
+  color: #334155;
 }
 
-.agent-contact-item svg {
+.phone-number-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 600;
+  user-select: text;
+}
+
+.phone-number-unavailable {
   color: #64748b;
+  font-size: 14px;
+}
+
+.phone-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 9px;
   flex-shrink: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #475569;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.phone-copy-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.phone-copy-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.phone-copy-btn.copied {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.phone-copy-btn.failed {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
 }
 
 .agent-schedule-btn {
