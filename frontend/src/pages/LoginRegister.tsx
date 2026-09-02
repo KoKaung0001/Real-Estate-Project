@@ -2,14 +2,37 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useProperties } from '../contexts/PropertiesContext';
+
+function AuthStats({ approvedListingCount }: { approvedListingCount: number }) {
+  return (
+    <div className="auth-stats-grid">
+      <div className="auth-stat-box">
+        <div className="auth-stat-value">{approvedListingCount}</div>
+        <div className="auth-stat-label">Listings</div>
+      </div>
+      <div className="auth-stat-box">
+        <div className="auth-stat-value">1</div>
+        <div className="auth-stat-label">City Covered</div>
+      </div>
+      <div className="auth-stat-box">
+        <div className="auth-stat-value">0</div>
+        <div className="auth-stat-label">Happy Buyers</div>
+      </div>
+    </div>
+  );
+}
 
 export function LoginRegister() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, register } = useAuth();
+  const { properties } = useProperties();
   
-  const isLogin = location.pathname === '/login' || location.pathname === '/signin';
-  const [mode, setMode] = useState<'signin' | 'signup'>(isLogin ? 'signin' : 'signup');
+  const isLogin = location.pathname === '/login';
+  const approvedListingCount = properties.filter(
+    (property) => property.approvalStatus === 'APPROVED',
+  ).length;
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -54,7 +77,7 @@ export function LoginRegister() {
     }
   };
 
-  if (mode === 'signin') {
+  if (isLogin) {
     return (
       <div className="auth-page">
         <div className="auth-signin">
@@ -70,24 +93,7 @@ export function LoginRegister() {
                 Your dream home is one search away.<br />
                 Sign in to continue your journey.
               </p>
-              <div className="auth-stats-grid">
-                <div className="auth-stat-box">
-                  <div className="auth-stat-value">12K+</div>
-                  <div className="auth-stat-label">Listings</div>
-                </div>
-                <div className="auth-stat-box">
-                  <div className="auth-stat-value">48K+</div>
-                  <div className="auth-stat-label">Happy Buyers</div>
-                </div>
-                <div className="auth-stat-box">
-                  <div className="auth-stat-value">280</div>
-                  <div className="auth-stat-label">Cities</div>
-                </div>
-                <div className="auth-stat-box">
-                  <div className="auth-stat-value">4.9★</div>
-                  <div className="auth-stat-label">App Rating</div>
-                </div>
-              </div>
+              <AuthStats approvedListingCount={approvedListingCount} />
             </div>
           </div>
 
@@ -96,9 +102,9 @@ export function LoginRegister() {
               <h2 className="auth-form-title">Sign in to UrbanNest</h2>
               <p className="auth-form-subtitle">
                 Don't have an account?{' '}
-                <button onClick={() => setMode('signup')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit', fontWeight: 'inherit' }}>
+                <Link to="/register" style={{ fontSize: 'inherit', fontWeight: 'inherit' }}>
                   Create one free
-                </button>
+                </Link>
               </p>
 
               <div className="auth-divider">
@@ -165,10 +171,12 @@ export function LoginRegister() {
         <h1 className="auth-register-title">Create your account</h1>
         <p className="auth-register-subtitle">
           Already have one?{' '}
-          <button onClick={() => setMode('signin')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit', fontWeight: 'inherit', color: '#2563eb' }}>
+          <Link to="/login" style={{ fontSize: 'inherit', fontWeight: 'inherit', color: '#2563eb' }}>
             Sign in
-          </button>
+          </Link>
         </p>
+
+        <AuthStats approvedListingCount={approvedListingCount} />
 
         <div className="auth-register-card">
           {error && <div className="auth-error">{error}</div>}
