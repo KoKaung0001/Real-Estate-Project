@@ -42,6 +42,7 @@ class PropertyImageStorageServiceTest {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.store(file));
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertEquals("The selected image is empty. Please choose another file.", exception.getReason());
     }
 
     @Test
@@ -57,6 +58,26 @@ class PropertyImageStorageServiceTest {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.store(file));
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertEquals("The selected file does not appear to be a valid image.", exception.getReason());
+    }
+
+    @Test
+    void rejectsUnsupportedContentType() {
+        PropertyImageStorageService service = new PropertyImageStorageService(temporaryDirectory.toString());
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "property.svg",
+                "image/svg+xml",
+                "<svg></svg>".getBytes()
+        );
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.store(file));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertEquals(
+                "Unsupported image format. Please upload a JPEG, PNG, or WebP image.",
+                exception.getReason()
+        );
     }
 
     @Test
@@ -71,5 +92,6 @@ class PropertyImageStorageServiceTest {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.store(file));
 
         assertEquals(HttpStatus.CONTENT_TOO_LARGE, exception.getStatusCode());
+        assertEquals("Image is too large. Maximum file size is 5 MB.", exception.getReason());
     }
 }

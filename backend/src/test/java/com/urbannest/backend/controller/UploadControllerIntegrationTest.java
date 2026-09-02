@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 class UploadControllerIntegrationTest {
 
     private static final Pattern URL_PATTERN = Pattern.compile("\\\"url\\\":\\\"([^\\\"]+)\\\"");
+    private static final Pattern MESSAGE_PATTERN = Pattern.compile("\\\"message\\\":\\\"([^\\\"]+)\\\"");
     private static final String TEST_USERNAME = "upload-jwt-user";
 
     @Autowired
@@ -78,6 +79,12 @@ class UploadControllerIntegrationTest {
     }
 
     @Test
+    void authenticatedUserCanUploadPngAndWebpImages() throws Exception {
+        assertEquals(200, upload(pngImage(), jwt).statusCode());
+        assertEquals(200, upload(webpImage(), jwt).statusCode());
+    }
+
+    @Test
     void invalidAuthenticatedImagePreservesBadRequestInsteadOfBecomingForbidden() throws Exception {
         MockMultipartFile svg = new MockMultipartFile(
                 "file",
@@ -90,6 +97,33 @@ class UploadControllerIntegrationTest {
 
         assertEquals(400, response.statusCode());
         assertNotEquals(403, response.statusCode());
+        assertMessage(response, "Unsupported image format. Please upload a JPEG, PNG, or WebP image.");
+    }
+
+    @Test
+    void spoofedAuthenticatedImageReturnsReadableBadRequest() throws Exception {
+        MockMultipartFile spoofed = new MockMultipartFile(
+                "file",
+                "renamed.jpg",
+                "image/jpeg",
+                "not really a jpeg".getBytes(StandardCharsets.UTF_8)
+        );
+
+        HttpResponse<String> response = upload(spoofed, jwt);
+
+        assertEquals(400, response.statusCode());
+        assertMessage(response, "The selected file does not appear to be a valid image.");
+    }
+
+    @Test
+    void emptyAuthenticatedImageReturnsReadableBadRequest() throws Exception {
+        HttpResponse<String> response = upload(
+                new MockMultipartFile("file", "empty.png", "image/png", new byte[0]),
+                jwt
+        );
+
+        assertEquals(400, response.statusCode());
+        assertMessage(response, "The selected image is empty. Please choose another file.");
     }
 
     @Test
@@ -107,6 +141,7 @@ class UploadControllerIntegrationTest {
 
         assertEquals(413, response.statusCode());
         assertNotEquals(403, response.statusCode());
+        assertMessage(response, "Image is too large. Maximum file size is 5 MB.");
     }
 
     @Test
@@ -123,6 +158,31 @@ class UploadControllerIntegrationTest {
                 "image/jpeg",
                 new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0x01, 0x02}
         );
+    }
+
+    private MockMultipartFile pngImage() {
+        return new MockMultipartFile(
+                "file",
+                "property.png",
+                "image/png",
+                new byte[]{(byte) 0x89, (byte) 'P', (byte) 'N', (byte) 'G', 0x0D, 0x0A, 0x1A, 0x0A}
+        );
+    }
+
+    private MockMultipartFile webpImage() {
+        return new MockMultipartFile(
+                "file",
+                "property.webp",
+                "image/webp",
+                new byte[]{(byte) 'R', (byte) 'I', (byte) 'F', (byte) 'F', 0x04, 0x00, 0x00, 0x00,
+                        (byte) 'W', (byte) 'E', (byte) 'B', (byte) 'P'}
+        );
+    }
+
+    private void assertMessage(HttpResponse<String> response, String expectedMessage) {
+        Matcher messageMatcher = MESSAGE_PATTERN.matcher(response.body());
+        assertTrue(messageMatcher.find());
+        assertEquals(expectedMessage, messageMatcher.group(1));
     }
 
     private HttpResponse<String> upload(MockMultipartFile file, String bearerToken) throws Exception {

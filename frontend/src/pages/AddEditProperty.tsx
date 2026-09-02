@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, X, FileText, Home, Map, Camera, Building2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,7 +16,6 @@ const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
   { value: 'HOUSE', label: 'House' },
   { value: 'CONDO', label: 'Condo' },
   { value: 'LAND', label: 'Land' },
-  { value: 'TOWNHOUSE', label: 'Townhouse' },
 ];
 
 const OWNERSHIP_TYPES: { value: OwnershipType; label: string }[] = [
@@ -128,12 +128,37 @@ function formFromProperty(p: Property, user: User | null): FormData {
 }
 
 function getUploadErrorMessage(error: unknown): string {
-  const responseData = typeof error === 'object' && error !== null && 'response' in error
-    ? (error as { response?: { data?: { detail?: string; message?: string } } }).response?.data
-    : undefined;
-  return responseData?.detail
-    ?? responseData?.message
-    ?? (error instanceof Error ? error.message : 'Unable to upload image.');
+  if (!axios.isAxiosError(error)) {
+    return 'Image upload failed. Please try again.';
+  }
+
+  if (!error.response) {
+    return 'Unable to upload the image. Please check your connection and try again.';
+  }
+
+  const status = error.response.status;
+  const responseData = error.response.data as { message?: unknown } | undefined;
+  const backendMessage = typeof responseData?.message === 'string' ? responseData.message : undefined;
+  const knownValidationMessages = new Set([
+    'Image is too large. Maximum file size is 5 MB.',
+    'Unsupported image format. Please upload a JPEG, PNG, or WebP image.',
+    'The selected image is empty. Please choose another file.',
+    'The selected file does not appear to be a valid image.',
+  ]);
+
+  if (status === 401 || status === 403) {
+    return 'Your session has expired. Please sign in again.';
+  }
+  if (status === 413) {
+    return 'Image is too large. Maximum file size is 5 MB.';
+  }
+  if (status === 400) {
+    return backendMessage && knownValidationMessages.has(backendMessage)
+      ? backendMessage
+      : 'The selected file does not appear to be a valid image.';
+  }
+
+  return 'Image upload failed. Please try again.';
 }
 
 export function AddEditProperty() {
@@ -486,6 +511,9 @@ export function AddEditProperty() {
                         className={`form-select ${errors.propertyType ? 'error' : ''}`}
                       >
                         <option value="">Select Type</option>
+                        {formData.propertyType === 'TOWNHOUSE' && (
+                          <option value="TOWNHOUSE" disabled>Townhouse (legacy)</option>
+                        )}
                         {PROPERTY_TYPES.map((type) => (
                           <option key={type.value} value={type.value}>
                             {type.label}

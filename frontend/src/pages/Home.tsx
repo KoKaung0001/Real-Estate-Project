@@ -12,7 +12,6 @@ const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
   { value: 'APARTMENT', label: 'Apartment' },
   { value: 'HOUSE', label: 'House' },
   { value: 'CONDO', label: 'Condo' },
-  { value: 'TOWNHOUSE', label: 'Townhouse' },
   { value: 'LAND', label: 'Land' },
 ];
 

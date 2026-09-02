@@ -37,20 +37,32 @@ public class PropertyImageStorageService {
 
     public String store(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image file is required");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "The selected image is empty. Please choose another file."
+            );
         }
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new ResponseStatusException(HttpStatus.CONTENT_TOO_LARGE, "Image must not exceed 5 MB");
+            throw new ResponseStatusException(
+                    HttpStatus.CONTENT_TOO_LARGE,
+                    "Image is too large. Maximum file size is 5 MB."
+            );
         }
 
         ImageType imageType = detectImageType(file);
         String declaredContentType = file.getContentType() == null
                 ? ""
                 : file.getContentType().toLowerCase(Locale.ROOT);
+        if (!ImageType.supports(declaredContentType)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Unsupported image format. Please upload a JPEG, PNG, or WebP image."
+            );
+        }
         if (imageType == null || !imageType.contentType.equals(declaredContentType)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Only JPEG, PNG, and WebP images are supported"
+                    "The selected file does not appear to be a valid image."
             );
         }
 
@@ -65,7 +77,7 @@ public class PropertyImageStorageService {
         } catch (IOException exception) {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Unable to store image",
+                    "Image upload failed. Please try again.",
                     exception
             );
         }
@@ -84,7 +96,11 @@ public class PropertyImageStorageService {
         try (InputStream inputStream = file.getInputStream()) {
             bytesRead = inputStream.read(header);
         } catch (IOException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to read image", exception);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "The selected file does not appear to be a valid image.",
+                    exception
+            );
         }
 
         if (bytesRead >= 3
@@ -133,6 +149,15 @@ public class PropertyImageStorageService {
         ImageType(String contentType, String extension) {
             this.contentType = contentType;
             this.extension = extension;
+        }
+
+        private static boolean supports(String contentType) {
+            for (ImageType imageType : values()) {
+                if (imageType.contentType.equals(contentType)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
