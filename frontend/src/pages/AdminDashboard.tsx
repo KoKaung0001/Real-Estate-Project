@@ -20,10 +20,10 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { useProperties } from '../contexts/PropertiesContext';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { NotificationsBell } from '../components/NotificationsBell';
-import { adminAPI } from '../utils/api';
+import { adminAPI, propertyPostingFeeAPI } from '../utils/api';
 import { resolvePropertyImageUrl } from '../utils/imageUrl';
-import { formatPropertyPrice } from '../utils/price';
-import type { Property } from '../types';
+import { formatMMKAmount, formatPropertyPrice } from '../utils/price';
+import type { Property, PropertyPostingFee, PropertyType } from '../types';
 
 const formatDate = (iso: string) => {
   try {
@@ -42,6 +42,13 @@ export function AdminDashboard() {
   const [error, setError] = useState('');
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [reviewing, setReviewing] = useState<Property | null>(null);
+  const [postingFees, setPostingFees] = useState<PropertyPostingFee[]>([]);
+  const [feeDrafts, setFeeDrafts] = useState<Partial<Record<PropertyType, string>>>({});
+  const [editingFee, setEditingFee] = useState<PropertyType | null>(null);
+  const [savingFee, setSavingFee] = useState<PropertyType | null>(null);
+  const [feeLoading, setFeeLoading] = useState(true);
+  const [feeMessage, setFeeMessage] = useState('');
+  const [feeError, setFeeError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -55,6 +62,29 @@ export function AdminDashboard() {
       })
       .finally(() => {
         if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    propertyPostingFeeAPI.getAll()
+      .then(({ data }) => {
+        if (!active) return;
+        setPostingFees(data);
+        setFeeDrafts(Object.fromEntries(
+          data.map((fee) => [fee.propertyType, String(fee.feeAmount)]),
+        ));
+      })
+      .catch(() => {
+        if (active) setFeeError('Unable to load property posting fees.');
+      })
+      .finally(() => {
+        if (active) setFeeLoading(false);
       });
 
     return () => {
@@ -110,6 +140,44 @@ export function AdminDashboard() {
       setError('Unable to reject the property.');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const startEditingFee = (fee: PropertyPostingFee) => {
+    setEditingFee(fee.propertyType);
+    setFeeDrafts((current) => ({ ...current, [fee.propertyType]: String(fee.feeAmount) }));
+    setFeeMessage('');
+    setFeeError('');
+  };
+
+  const cancelEditingFee = (fee: PropertyPostingFee) => {
+    setFeeDrafts((current) => ({ ...current, [fee.propertyType]: String(fee.feeAmount) }));
+    setEditingFee(null);
+    setFeeError('');
+  };
+
+  const savePostingFee = async (propertyType: PropertyType) => {
+    const draft = feeDrafts[propertyType]?.trim() ?? '';
+    if (!/^\d+$/.test(draft) || Number(draft) > 999_999_999_999) {
+      setFeeError('Fee must be a non-negative whole MMK amount up to 999,999,999,999.');
+      return;
+    }
+
+    setSavingFee(propertyType);
+    setFeeMessage('');
+    setFeeError('');
+    try {
+      const { data } = await adminAPI.updatePostingFee(propertyType, Number(draft));
+      setPostingFees((current) => current.map((fee) => (
+        fee.propertyType === propertyType ? data : fee
+      )));
+      setFeeDrafts((current) => ({ ...current, [propertyType]: String(data.feeAmount) }));
+      setEditingFee(null);
+      setFeeMessage(`${propertyType.charAt(0) + propertyType.slice(1).toLowerCase()} fee updated.`);
+    } catch {
+      setFeeError('Unable to update the posting fee. Please try again.');
+    } finally {
+      setSavingFee(null);
     }
   };
 
@@ -308,6 +376,75 @@ export function AdminDashboard() {
                 </table>
               </div>
             </div>
+
+            <section className="admin-card admin-fees-card" aria-labelledby="posting-fees-title">
+              <div className="admin-card-header">
+                <div>
+                  <div id="posting-fees-title" className="admin-card-title">Property Posting Fees</div>
+                  <div className="admin-fees-subtitle">Configure the informational fee shown for new property submissions.</div>
+                </div>
+              </div>
+              {feeLoading ? (
+                <div className="admin-fees-status">Loading posting fees...</div>
+              ) : postingFees.length === 0 ? (
+                <div className="admin-fees-status error">{feeError || 'No posting fees are configured.'}</div>
+              ) : (
+                <div className="admin-fee-list">
+                  {postingFees.map((fee) => (
+                    <div className="admin-fee-row" key={fee.propertyType}>
+                      <div>
+                        <div className="admin-fee-type">
+                          {fee.propertyType.charAt(0) + fee.propertyType.slice(1).toLowerCase()}
+                        </div>
+                        {editingFee !== fee.propertyType && (
+                          <div className="admin-fee-amount">{formatMMKAmount(fee.feeAmount)}</div>
+                        )}
+                      </div>
+                      {editingFee === fee.propertyType ? (
+                        <div className="admin-fee-editor">
+                          <div className="admin-fee-input-wrap">
+                            <span>MMK</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="999999999999"
+                              step="1"
+                              inputMode="numeric"
+                              value={feeDrafts[fee.propertyType] ?? ''}
+                              onChange={(event) => setFeeDrafts((current) => ({
+                                ...current,
+                                [fee.propertyType]: event.target.value,
+                              }))}
+                              aria-label={`${fee.propertyType} posting fee`}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="admin-fee-save"
+                            onClick={() => savePostingFee(fee.propertyType)}
+                            disabled={savingFee === fee.propertyType}
+                          >
+                            {savingFee === fee.propertyType ? 'Saving...' : 'Save'}
+                          </button>
+                          <button type="button" className="admin-fee-cancel" onClick={() => cancelEditingFee(fee)}>
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" className="admin-fee-edit" onClick={() => startEditingFee(fee)}>
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(feeMessage || feeError) && postingFees.length > 0 && (
+                <div className={`admin-fees-status ${feeError ? 'error' : 'success'}`} aria-live="polite">
+                  {feeError || feeMessage}
+                </div>
+              )}
+            </section>
 
             <div className="admin-quick-grid">
               <Link to="/admin/manage-all?tab=properties" className="admin-quick-card">

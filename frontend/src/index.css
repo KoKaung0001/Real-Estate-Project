@@ -3214,6 +3214,17 @@ body {
   color: #64748b;
 }
 
+.listing-fee-status {
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.listing-fee-status.error {
+  color: #b91c1c;
+}
+
 /* Form Footer */
 .form-footer {
   display: flex;
@@ -5458,6 +5469,122 @@ body {
   margin-top: 20px;
 }
 
+.admin-fees-card {
+  margin-top: 20px;
+}
+
+.admin-fees-subtitle {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.admin-fee-list {
+  padding: 0 20px;
+}
+
+.admin-fee-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.admin-fee-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-fee-type {
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-fee-amount {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-fee-editor {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-fee-input-wrap {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-fee-input-wrap span {
+  padding: 8px 10px;
+  border-right: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-fee-input-wrap input {
+  width: 150px;
+  padding: 8px 10px;
+  border: 0;
+  outline: 0;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.admin-fee-edit,
+.admin-fee-save,
+.admin-fee-cancel {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-fee-edit,
+.admin-fee-save {
+  border: 0;
+  background: #2563eb;
+  color: #fff;
+}
+
+.admin-fee-cancel {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+}
+
+.admin-fee-save:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.admin-fees-status {
+  padding: 16px 20px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-fees-status.success {
+  color: #15803d;
+}
+
+.admin-fees-status.error {
+  color: #b91c1c;
+}
+
 .admin-cell-id {
   font-size: 13px;
   font-weight: 600;
@@ -5606,6 +5733,17 @@ body {
 @media (max-width: 560px) {
   .admin-quick-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-fee-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-fee-editor,
+  .admin-fee-input-wrap,
+  .admin-fee-input-wrap input {
+    width: 100%;
   }
 }
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, Property, PropertyRequest, User } from '../types';
+import type { AuthResponse, Property, PropertyPostingFee, PropertyRequest, PropertyType, User } from '../types';
 import { BACKEND_BASE_URL } from './imageUrl';
 
 const api = axios.create({
@@ -63,6 +63,10 @@ export const propertyAPI = {
   delete: (id: number) => api.delete<{ message: string }>(`/api/properties/${id}`),
 };
 
+export const propertyPostingFeeAPI = {
+  getAll: () => api.get<PropertyPostingFee[]>('/api/property-posting-fees'),
+};
+
 export const uploadAPI = {
   uploadPropertyImage: async (file: File) => {
     const formData = new FormData();
@@ -83,6 +87,8 @@ export const adminAPI = {
     api.put<Property>(`/api/admin/properties/${id}`, data),
   deleteProperty: (id: number) =>
     api.delete<{ message: string }>(`/api/admin/properties/${id}`),
+  updatePostingFee: (propertyType: PropertyType, feeAmount: number) =>
+    api.put<PropertyPostingFee>(`/api/admin/property-posting-fees/${propertyType}`, { feeAmount }),
 };
 
 export default api;

@@ -6,11 +6,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useProperties } from '../contexts/PropertiesContext';
 import { PropertyMap, type MapCoordinates } from '../components/PropertyMap';
 import { YANGON_TOWNSHIPS, FEATURES_EN } from '../data/myanmarProperties';
-import { uploadAPI } from '../utils/api';
+import { propertyPostingFeeAPI, uploadAPI } from '../utils/api';
 import { resolvePropertyImageUrl } from '../utils/imageUrl';
-import { formatPropertyPrice } from '../utils/price';
+import { formatMMKAmount, formatPropertyPrice } from '../utils/price';
 import { resolvePropertyTownship } from '../utils/township';
-import type { OwnershipType, Property, PropertyRequest, PropertyType, SaleStatus, User } from '../types';
+import type { OwnershipType, Property, PropertyPostingFee, PropertyRequest, PropertyType, SaleStatus, User } from '../types';
 
 const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
   { value: 'APARTMENT', label: 'Apartment' },
@@ -176,6 +176,9 @@ export function AddEditProperty() {
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [postingFees, setPostingFees] = useState<PropertyPostingFee[]>([]);
+  const [postingFeesLoading, setPostingFeesLoading] = useState(!isEditing);
+  const [postingFeesError, setPostingFeesError] = useState('');
   const [formData, setFormData] = useState<FormData>(() =>
     existing
       ? formFromProperty(existing, user)
@@ -193,8 +196,29 @@ export function AddEditProperty() {
     }
   }, [existing, id, user]);
 
+  useEffect(() => {
+    if (isEditing) return;
+
+    let active = true;
+    propertyPostingFeeAPI.getAll()
+      .then(({ data }) => {
+        if (active) setPostingFees(data);
+      })
+      .catch(() => {
+        if (active) setPostingFeesError('Listing fee is currently unavailable.');
+      })
+      .finally(() => {
+        if (active) setPostingFeesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isEditing]);
+
   const featureLabels = FEATURES_EN;
   const isLand = formData.propertyType === 'LAND';
+  const selectedPostingFee = postingFees.find((fee) => fee.propertyType === formData.propertyType);
 
   const steps = [
     { id: 1, label: 'Basic Info', icon: Home },
@@ -1132,7 +1156,15 @@ export function AddEditProperty() {
                   {!isEditing && (
                     <aside className="listing-fee-card" aria-labelledby="listing-fee-title">
                       <p id="listing-fee-title" className="listing-fee-label">Listing Fee</p>
-                      <p className="listing-fee-amount">MMK 100,000</p>
+                      {postingFeesLoading ? (
+                        <p className="listing-fee-status">Loading listing fee...</p>
+                      ) : postingFeesError || !selectedPostingFee ? (
+                        <p className="listing-fee-status error">
+                          {postingFeesError || 'Listing fee is currently unavailable.'}
+                        </p>
+                      ) : (
+                        <p className="listing-fee-amount">{formatMMKAmount(selectedPostingFee.feeAmount)}</p>
+                      )}
                       <p className="listing-fee-description">
                         A one-time listing fee applies when submitting a new property.
                       </p>

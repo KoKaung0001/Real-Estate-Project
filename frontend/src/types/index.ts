@@ -24,6 +24,11 @@ export type SaleStatus = 'FOR_SALE' | 'FOR_RENT';
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type OwnershipType = 'FREEHOLD' | 'LEASEHOLD' | 'GOVERNMENT' | 'PERMIT' | 'OTHER';
 
+export interface PropertyPostingFee {
+  propertyType: PropertyType;
+  feeAmount: number;
+}
+
 export interface Property {
   id: number;
   title: string;

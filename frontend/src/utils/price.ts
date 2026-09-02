@@ -6,3 +6,7 @@ export function formatPropertyPrice(value: number): string {
 
   return `MMK ${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 }
+
+export function formatMMKAmount(value: number): string {
+  return `MMK ${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+}
