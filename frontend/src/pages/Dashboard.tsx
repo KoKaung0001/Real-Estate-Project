@@ -23,6 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProperties } from '../contexts/PropertiesContext';
 import { resolvePropertyImageUrl } from '../utils/imageUrl';
+import { formatPropertyPrice } from '../utils/price';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -255,7 +256,7 @@ export function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    <div className="dash-price">MMK {property.price.toLocaleString()}</div>
+                    <div className="dash-price">{formatPropertyPrice(property.price)}</div>
                     <div>
                       <span className="dash-type-chip">{property.propertyType.toLowerCase()}</span>
                     </div>
@@ -311,7 +312,7 @@ export function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    <div className="dash-price">MMK {property.price.toLocaleString()}</div>
+                    <div className="dash-price">{formatPropertyPrice(property.price)}</div>
                     <div>
                       <span className="dash-type-chip">
                         {property.propertyType.charAt(0) + property.propertyType.slice(1).toLowerCase()}

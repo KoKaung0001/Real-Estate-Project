@@ -6,6 +6,7 @@ import com.urbannest.backend.entity.*;
 import com.urbannest.backend.repository.PropertyRepository;
 import com.urbannest.backend.repository.UserRepository;
 import com.urbannest.backend.security.CustomUserDetails;
+import com.urbannest.backend.support.SamplePropertyShowcase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -164,7 +165,7 @@ public class PropertyService {
                 .longitude(p.getLongitude())
                 .features(p.getFeatures())
                 .imageUrl(p.getImageUrl())
-                .owner(p.getOwner().getUsername())
+                .owner(SamplePropertyShowcase.ownerDisplayName(p.getOwner().getUsername()))
                 .ownerPhone(p.getOwner().getPhone())
                 .createdAt(p.getCreatedAt())
                 .build();

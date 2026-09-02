@@ -22,6 +22,7 @@ import { AdminSidebar } from '../components/AdminSidebar';
 import { NotificationsBell } from '../components/NotificationsBell';
 import { adminAPI } from '../utils/api';
 import { resolvePropertyImageUrl } from '../utils/imageUrl';
+import { formatPropertyPrice } from '../utils/price';
 import type { Property } from '../types';
 
 const formatDate = (iso: string) => {
@@ -221,7 +222,7 @@ export function AdminDashboard() {
                               </div>
                             </td>
                             <td>{property.location}</td>
-                            <td className="adm-price">MMK {property.price.toLocaleString()}</td>
+                            <td className="adm-price">{formatPropertyPrice(property.price)}</td>
                             <td className="admin-cell-owner">{property.owner}</td>
                             <td className="admin-cell-date">{formatDate(property.createdAt)}</td>
                             <td>
@@ -298,7 +299,7 @@ export function AdminDashboard() {
                           </div>
                         </td>
                         <td>{property.location}</td>
-                        <td className="adm-price">MMK {property.price.toLocaleString()}</td>
+                        <td className="adm-price">{formatPropertyPrice(property.price)}</td>
                         <td>{statusBadge(property.approvalStatus)}</td>
                         <td className="admin-cell-date">{formatDate(property.createdAt)}</td>
                       </tr>
@@ -360,7 +361,7 @@ export function AdminDashboard() {
               )}
               <div className="admin-review-title-row">
                 <div className="admin-review-title">{reviewing.title}</div>
-                <div className="admin-pending-price">MMK {reviewing.price.toLocaleString()}</div>
+                <div className="admin-pending-price">{formatPropertyPrice(reviewing.price)}</div>
               </div>
               <div className="admin-review-loc">
                 <MapPin style={{ width: 14, height: 14, verticalAlign: 'middle' }} /> {reviewing.location}

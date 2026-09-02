@@ -8,6 +8,7 @@ import com.urbannest.backend.entity.User;
 import com.urbannest.backend.entity.UserRole;
 import com.urbannest.backend.repository.PropertyRepository;
 import com.urbannest.backend.repository.UserRepository;
+import com.urbannest.backend.support.SamplePropertyShowcase;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
@@ -34,7 +35,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SamplePropertyDataImporter implements CommandLineRunner {
 
-    private static final String SAMPLE_USERNAME = "_sample_data";
     private static final BigDecimal LAKH_TO_MMK = BigDecimal.valueOf(100_000);
 
     private final PropertyRepository propertyRepository;
@@ -52,7 +52,7 @@ public class SamplePropertyDataImporter implements CommandLineRunner {
             throw new IllegalStateException("Sample property workbook not found: " + source);
         }
 
-        User owner = userRepository.findByUsername(SAMPLE_USERNAME)
+        User owner = userRepository.findByUsername(SamplePropertyShowcase.USERNAME)
                 .orElseGet(this::createSampleOwner);
         if (!propertyRepository.findByOwner(owner).isEmpty()) {
             return;
@@ -67,10 +67,10 @@ public class SamplePropertyDataImporter implements CommandLineRunner {
 
     private User createSampleOwner() {
         return userRepository.save(User.builder()
-                .username(SAMPLE_USERNAME)
+                .username(SamplePropertyShowcase.USERNAME)
                 .email("sample-data@local.urbannest")
                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
-                .phone("0000000000")
+                .phone(SamplePropertyShowcase.PHONE)
                 .role(UserRole.USER)
                 .build());
     }
@@ -124,6 +124,8 @@ public class SamplePropertyDataImporter implements CommandLineRunner {
             return null;
         }
 
+        PropertyType propertyType = PropertyType.APARTMENT;
+
         return Property.builder()
                 .title(title)
                 .description("Imported local sample listing. Source: " + listingUrl)
@@ -132,11 +134,11 @@ public class SamplePropertyDataImporter implements CommandLineRunner {
                 .township(structuredLocation == null ? null : structuredLocation.township())
                 .city(structuredLocation == null ? null : structuredLocation.city())
                 .stateRegion(structuredLocation == null ? null : structuredLocation.stateRegion())
-                .propertyType(PropertyType.APARTMENT)
+                .propertyType(propertyType)
                 .status(SaleStatus.FOR_SALE)
                 .approvalStatus(ApprovalStatus.APPROVED)
-                .bedrooms(0)
-                .bathrooms(0)
+                .bedrooms(SamplePropertyShowcase.bedrooms(propertyType, area))
+                .bathrooms(SamplePropertyShowcase.bathrooms(propertyType, area))
                 .area(area)
                 .imageUrl(imageUrl.startsWith("https://") || imageUrl.startsWith("http://") ? imageUrl : null)
                 .owner(owner)

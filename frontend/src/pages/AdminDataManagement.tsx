@@ -7,6 +7,7 @@ import { AdminSidebar } from '../components/AdminSidebar';
 import { NotificationsBell } from '../components/NotificationsBell';
 import { adminAPI } from '../utils/api';
 import { resolvePropertyImageUrl } from '../utils/imageUrl';
+import { formatPropertyPrice } from '../utils/price';
 import type { Property, PropertyRequest, User } from '../types';
 
 const DEMO_USERS: User[] = [
@@ -320,7 +321,7 @@ export function AdminDataManagement() {
                               </div>
                             </td>
                             <td>{statusBadge(property.approvalStatus)}</td>
-                            <td className="adm-price">MMK {property.price.toLocaleString()}</td>
+                            <td className="adm-price">{formatPropertyPrice(property.price)}</td>
                             <td>
                               <div className="adm-actions">
                                 {confirmDelete === `prop-${property.id}` ? (

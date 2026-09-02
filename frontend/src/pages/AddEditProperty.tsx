@@ -8,6 +8,7 @@ import { PropertyMap, type MapCoordinates } from '../components/PropertyMap';
 import { YANGON_TOWNSHIPS, FEATURES_EN } from '../data/myanmarProperties';
 import { uploadAPI } from '../utils/api';
 import { resolvePropertyImageUrl } from '../utils/imageUrl';
+import { formatPropertyPrice } from '../utils/price';
 import { resolvePropertyTownship } from '../utils/township';
 import type { OwnershipType, Property, PropertyRequest, PropertyType, SaleStatus, User } from '../types';
 
@@ -376,12 +377,6 @@ export function AddEditProperty() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatPrice = (price: string): string => {
-    const num = Number(price);
-    if (isNaN(num)) return price;
-    return num.toLocaleString();
   };
 
   const getProgressTransform = (): string => {
@@ -1061,7 +1056,7 @@ export function AddEditProperty() {
                           Price
                         </p>
                         <p className="summary-item-value">
-                          {formData.price ? `MMK ${formatPrice(formData.price)}` : '—'}
+                          {formData.price ? formatPropertyPrice(Number(formData.price)) : '—'}
                         </p>
                       </div>
                       <div className="summary-item">

@@ -6,6 +6,7 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { useProperties } from '../contexts/PropertiesContext';
 import { PropertyMap, type MapCoordinates } from '../components/PropertyMap';
 import { resolvePropertyImageUrl } from '../utils/imageUrl';
+import { formatPropertyPrice } from '../utils/price';
 import type { Property } from '../types';
 
 const formatType = (propertyType: Property['propertyType']) =>
@@ -158,7 +159,7 @@ export function PropertyDetails() {
   const favoriteId = String(property.id);
   const isFav = isFavorite(favoriteId);
   const badge = property.status === 'FOR_RENT' ? 'For Rent' : 'For Sale';
-  const priceFormatted = `MMK ${property.price.toLocaleString()}`;
+  const priceFormatted = formatPropertyPrice(property.price);
   const similarProperties = properties
     .filter((candidate) => candidate.id !== property.id && candidate.propertyType === property.propertyType)
     .slice(0, 3);
@@ -300,7 +301,7 @@ export function PropertyDetails() {
                       </span>
                     </div>
                     <div className="home-card-body">
-                      <div className="home-card-price">MMK {similar.price.toLocaleString()}</div>
+                      <div className="home-card-price">{formatPropertyPrice(similar.price)}</div>
                       <div className="home-card-title">{similar.title}</div>
                       <div className="home-card-address"><MapPin className="w-4 h-4" /> {similar.location}</div>
                       <div className="home-card-stats">
