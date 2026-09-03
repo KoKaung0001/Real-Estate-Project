@@ -5528,6 +5528,15 @@ body {
   border-bottom: 0;
 }
 
+.admin-focus-highlight {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  background: #eff6ff;
+  box-shadow: 0 0 0 6px rgb(37 99 235 / 12%);
+  scroll-margin-block: 24px;
+  transition: background 0.25s ease, box-shadow 0.25s ease, outline-color 0.25s ease;
+}
+
 .admin-contact-heading {
   display: flex;
   align-items: flex-start;

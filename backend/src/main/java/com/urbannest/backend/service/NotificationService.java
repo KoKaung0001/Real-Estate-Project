@@ -1,6 +1,7 @@
 package com.urbannest.backend.service;
 
 import com.urbannest.backend.dto.NotificationResponse;
+import com.urbannest.backend.entity.ContactMessage;
 import com.urbannest.backend.entity.Notification;
 import com.urbannest.backend.entity.NotificationType;
 import com.urbannest.backend.entity.Property;
@@ -41,12 +42,12 @@ public class NotificationService {
     }
 
     @Transactional
-    public void createContactMessageNotifications(String fullName) {
+    public void createContactMessageNotifications(ContactMessage contactMessage) {
         createAdminNotifications(
                 NotificationType.CONTACT_MESSAGE_RECEIVED,
                 "New Contact Message",
-                fullName + " sent a new contact message.",
-                "/admin/dashboard"
+                contactMessage.getFullName() + " sent a new contact message.",
+                "/admin/dashboard?focus=contact&messageId=" + contactMessage.getId()
         );
     }
 
@@ -56,7 +57,7 @@ public class NotificationService {
                 NotificationType.PROPERTY_APPROVAL_REQUESTED,
                 "New Property Approval Request",
                 property.getOwner().getUsername() + " submitted \"" + property.getTitle() + "\" for approval.",
-                "/admin/dashboard"
+                "/admin/dashboard?focus=property&propertyId=" + property.getId()
         );
     }
 

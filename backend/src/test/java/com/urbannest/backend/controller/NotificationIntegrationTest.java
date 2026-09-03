@@ -9,6 +9,7 @@ import com.urbannest.backend.entity.SaleStatus;
 import com.urbannest.backend.entity.User;
 import com.urbannest.backend.entity.UserRole;
 import com.urbannest.backend.repository.NotificationRepository;
+import com.urbannest.backend.repository.ContactMessageRepository;
 import com.urbannest.backend.repository.PropertyRepository;
 import com.urbannest.backend.repository.UserRepository;
 import com.urbannest.backend.security.CustomUserDetails;
@@ -59,6 +60,9 @@ class NotificationIntegrationTest {
     private NotificationRepository notificationRepository;
 
     @Autowired
+    private ContactMessageRepository contactMessageRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Autowired
@@ -80,18 +84,22 @@ class NotificationIntegrationTest {
                         ))))
                 .andExpect(status().isCreated());
 
-        assertAdminNotification(
+        Notification firstAdminNotification = assertAdminNotification(
                 firstAdmin,
                 NotificationType.CONTACT_MESSAGE_RECEIVED,
                 "New Contact Message",
                 "Notification Sender sent a new contact message."
         );
-        assertAdminNotification(
+        Notification secondAdminNotification = assertAdminNotification(
                 secondAdmin,
                 NotificationType.CONTACT_MESSAGE_RECEIVED,
                 "New Contact Message",
                 "Notification Sender sent a new contact message."
         );
+        Long contactMessageId = contactMessageRepository.findAllByOrderByCreatedAtDescIdDesc().getFirst().getId();
+        String expectedLink = "/admin/dashboard?focus=contact&messageId=" + contactMessageId;
+        assertEquals(expectedLink, firstAdminNotification.getLink());
+        assertEquals(expectedLink, secondAdminNotification.getLink());
         assertTrue(notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(normalUser.getId()).isEmpty());
     }
 
@@ -119,12 +127,15 @@ class NotificationIntegrationTest {
                 "New Property Approval Request",
                 expectedMessage
         );
-        assertAdminNotification(
+        Notification secondAdminNotification = assertAdminNotification(
                 secondAdmin,
                 NotificationType.PROPERTY_APPROVAL_REQUESTED,
                 "New Property Approval Request",
                 expectedMessage
         );
+        String expectedAdminLink = "/admin/dashboard?focus=property&propertyId=" + property.getId();
+        assertEquals(expectedAdminLink, notification.getLink());
+        assertEquals(expectedAdminLink, secondAdminNotification.getLink());
         List<Notification> ownerNotifications = notificationRepository
                 .findByUserIdOrderByCreatedAtDescIdDesc(owner.getId());
         assertEquals(1, ownerNotifications.size());
@@ -158,7 +169,7 @@ class NotificationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].type").value("PROPERTY_APPROVAL_REQUESTED"))
-                .andExpect(jsonPath("$[0].link").value("/admin/dashboard"));
+                .andExpect(jsonPath("$[0].link").value(expectedAdminLink));
 
         mockMvc.perform(put("/api/notifications/{id}/read", notification.getId())
                         .with(user(new CustomUserDetails(admin))))
@@ -349,7 +360,6 @@ class NotificationIntegrationTest {
         assertEquals(type, notification.getType());
         assertEquals(title, notification.getTitle());
         assertEquals(message, notification.getMessage());
-        assertEquals("/admin/dashboard", notification.getLink());
         assertFalse(notification.isRead());
         return notification;
     }

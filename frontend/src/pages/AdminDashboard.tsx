@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Users,
   Home,
@@ -50,6 +50,7 @@ const formatDateTime = (iso: string) => {
 };
 
 export function AdminDashboard() {
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { favoriteIds } = useFavorites();
   const { refreshProperties } = useProperties();
@@ -69,6 +70,18 @@ export function AdminDashboard() {
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [messagesError, setMessagesError] = useState('');
+  const [focusedTargetId, setFocusedTargetId] = useState<string | null>(null);
+  const handledFocusRequestRef = useRef<string | null>(null);
+
+  const focusType = searchParams.get('focus');
+  const rawFocusId = focusType === 'property'
+    ? searchParams.get('propertyId')
+    : focusType === 'contact'
+      ? searchParams.get('messageId')
+      : null;
+  const focusTargetId = rawFocusId && /^[1-9]\d*$/.test(rawFocusId)
+    ? `admin-${focusType}-${rawFocusId}`
+    : null;
 
   const loadAdminProperties = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -95,24 +108,58 @@ export function AdminDashboard() {
     if (approvalRequested) void loadAdminProperties();
   }, [loadAdminProperties, newlyReceived, user?.role]);
 
-  useEffect(() => {
-    let active = true;
-
-    adminAPI.getContactMessages()
-      .then(({ data }) => {
-        if (active) setContactMessages(data);
-      })
-      .catch(() => {
-        if (active) setMessagesError('Unable to load contact messages.');
-      })
-      .finally(() => {
-        if (active) setMessagesLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
+  const loadContactMessages = useCallback(async (showLoading = false) => {
+    if (showLoading) setMessagesLoading(true);
+    try {
+      const { data } = await adminAPI.getContactMessages();
+      setContactMessages(data);
+      setMessagesError('');
+    } catch {
+      setMessagesError('Unable to load contact messages.');
+    } finally {
+      if (showLoading) setMessagesLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadContactMessages(true);
+  }, [loadContactMessages]);
+
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') return;
+    const contactReceived = newlyReceived.some(
+      (notification) => notification.type === 'CONTACT_MESSAGE_RECEIVED',
+    );
+    if (contactReceived) void loadContactMessages();
+  }, [loadContactMessages, newlyReceived, user?.role]);
+
+  useEffect(() => {
+    if (!focusTargetId) {
+      handledFocusRequestRef.current = null;
+      setFocusedTargetId(null);
+      return;
+    }
+
+    const relevantDataLoading = focusType === 'property' ? loading : messagesLoading;
+    if (relevantDataLoading || handledFocusRequestRef.current === focusTargetId) return;
+
+    const target = document.getElementById(focusTargetId);
+    if (!target) {
+      setFocusedTargetId(null);
+      return;
+    }
+
+    handledFocusRequestRef.current = focusTargetId;
+    setFocusedTargetId(focusTargetId);
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.focus({ preventScroll: true });
+
+    const highlightTimeout = window.setTimeout(() => {
+      setFocusedTargetId((current) => (current === focusTargetId ? null : current));
+    }, 2800);
+
+    return () => window.clearTimeout(highlightTimeout);
+  }, [contactMessages, focusTargetId, focusType, loading, messagesLoading, properties]);
 
   useEffect(() => {
     let active = true;
@@ -327,7 +374,12 @@ export function AdminDashboard() {
                       </thead>
                       <tbody>
                         {pending.map((property) => (
-                          <tr key={property.id}>
+                          <tr
+                            id={`admin-property-${property.id}`}
+                            key={property.id}
+                            tabIndex={-1}
+                            className={focusedTargetId === `admin-property-${property.id}` ? 'admin-focus-highlight' : undefined}
+                          >
                             <td>
                               <div className="adm-property-cell">
                                 <img src={resolvePropertyImageUrl(property.imageUrl)} alt="" className="adm-property-thumb" />
@@ -371,7 +423,12 @@ export function AdminDashboard() {
                 ) : (
                   <div className="admin-recent-list">
                     {approved.slice(0, 4).map((property) => (
-                      <div className="admin-recent-item" key={property.id}>
+                      <div
+                        id={`admin-property-${property.id}`}
+                        className={`admin-recent-item${focusedTargetId === `admin-property-${property.id}` ? ' admin-focus-highlight' : ''}`}
+                        key={property.id}
+                        tabIndex={-1}
+                      >
                         <img src={resolvePropertyImageUrl(property.imageUrl)} alt="" className="admin-recent-thumb" />
                         <div className="admin-recent-info">
                           <div className="admin-recent-name">{property.title}</div>
@@ -444,7 +501,12 @@ export function AdminDashboard() {
               ) : (
                 <div className="admin-contact-list">
                   {contactMessages.map((contactMessage) => (
-                    <article className="admin-contact-message" key={contactMessage.id}>
+                    <article
+                      id={`admin-contact-${contactMessage.id}`}
+                      className={`admin-contact-message${focusedTargetId === `admin-contact-${contactMessage.id}` ? ' admin-focus-highlight' : ''}`}
+                      key={contactMessage.id}
+                      tabIndex={-1}
+                    >
                       <div className="admin-contact-heading">
                         <div>
                           <div className="admin-contact-name">{contactMessage.fullName}</div>

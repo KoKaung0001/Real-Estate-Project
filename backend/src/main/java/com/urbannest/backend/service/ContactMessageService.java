@@ -27,7 +27,7 @@ public class ContactMessageService {
                 .build();
 
         ContactMessage saved = repository.save(contactMessage);
-        notificationService.createContactMessageNotifications(saved.getFullName());
+        notificationService.createContactMessageNotifications(saved);
         return toResponse(saved);
     }
 
