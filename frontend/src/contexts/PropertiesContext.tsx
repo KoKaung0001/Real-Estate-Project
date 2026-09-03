@@ -10,6 +10,7 @@ import {
 import type { Property, PropertyRequest } from '../types';
 import { propertyAPI } from '../utils/api';
 import { useAuth } from './AuthContext';
+import { useNotifications } from './NotificationsContext';
 
 interface PropertiesContextType {
   properties: Property[];
@@ -36,6 +37,7 @@ function errorMessage(error: unknown): string {
 
 export function PropertiesProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
+  const { newlyReceived } = useNotifications();
   const [properties, setProperties] = useState<Property[]>([]);
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(false);
@@ -86,6 +88,14 @@ export function PropertiesProvider({ children }: { children: ReactNode }) {
     }
     refreshMyProperties().catch(() => undefined);
   }, [isAuthenticated, user?.id, refreshMyProperties]);
+
+  useEffect(() => {
+    if (user?.role !== 'USER') return;
+    const statusChanged = newlyReceived.some((notification) => (
+      notification.type === 'PROPERTY_APPROVED' || notification.type === 'PROPERTY_REJECTED'
+    ));
+    if (statusChanged) refreshMyProperties().catch(() => undefined);
+  }, [newlyReceived, refreshMyProperties, user?.role]);
 
   const getPropertyById = useCallback(
     async (id: number) => (await propertyAPI.getById(id)).data,

@@ -16,6 +16,7 @@ const POLL_INTERVAL_MS = 20_000;
 
 interface NotificationsContextType {
   notifications: Notification[];
+  newlyReceived: Notification[];
   unreadCount: number;
   loading: boolean;
   error: string;
@@ -28,20 +29,35 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const authenticatedUserId = user?.id;
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [newlyReceived, setNewlyReceived] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const activeUserIdRef = useRef<number | undefined>(user?.id);
-  activeUserIdRef.current = user?.id;
+  const activeUserIdRef = useRef<number | undefined>(authenticatedUserId);
+  const initializedUserIdRef = useRef<number | undefined>(undefined);
+  const seenNotificationIdsRef = useRef<Set<number>>(new Set());
+  activeUserIdRef.current = authenticatedUserId;
 
   const fetchNotifications = useCallback(async (showLoading = false) => {
-    const requestedUserId = user?.id;
+    const requestedUserId = authenticatedUserId;
     if (requestedUserId === undefined) return;
 
     if (showLoading) setLoading(true);
     try {
       const { data } = await notificationAPI.getAll();
       if (activeUserIdRef.current === requestedUserId) {
+        if (initializedUserIdRef.current !== requestedUserId) {
+          initializedUserIdRef.current = requestedUserId;
+          seenNotificationIdsRef.current = new Set(data.map((notification) => notification.id));
+          setNewlyReceived([]);
+        } else {
+          const newNotifications = data.filter(
+            (notification) => !seenNotificationIdsRef.current.has(notification.id),
+          );
+          data.forEach((notification) => seenNotificationIdsRef.current.add(notification.id));
+          if (newNotifications.length > 0) setNewlyReceived(newNotifications);
+        }
         setNotifications(data);
         setError('');
       }
@@ -54,23 +70,42 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  }, [user?.id]);
+  }, [authenticatedUserId]);
 
   useEffect(() => {
-    if (!user) {
+    if (authenticatedUserId === undefined) {
       setNotifications([]);
+      setNewlyReceived([]);
       setLoading(false);
       setError('');
+      initializedUserIdRef.current = undefined;
+      seenNotificationIdsRef.current.clear();
       return;
     }
+
+    initializedUserIdRef.current = undefined;
+    seenNotificationIdsRef.current = new Set();
+    setNewlyReceived([]);
 
     void fetchNotifications(true);
     const intervalId = window.setInterval(() => {
       void fetchNotifications();
     }, POLL_INTERVAL_MS);
 
-    return () => window.clearInterval(intervalId);
-  }, [fetchNotifications, user]);
+    const refreshWhenActive = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchNotifications();
+      }
+    };
+    window.addEventListener('focus', refreshWhenActive);
+    document.addEventListener('visibilitychange', refreshWhenActive);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshWhenActive);
+      document.removeEventListener('visibilitychange', refreshWhenActive);
+    };
+  }, [authenticatedUserId, fetchNotifications]);
 
   const refresh = useCallback(async () => {
     await fetchNotifications();
@@ -114,13 +149,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({
     notifications,
+    newlyReceived,
     unreadCount: notifications.filter((notification) => !notification.isRead).length,
     loading,
     error,
     refresh,
     markRead,
     markAllRead,
-  }), [notifications, loading, error, refresh, markRead, markAllRead]);
+  }), [notifications, newlyReceived, loading, error, refresh, markRead, markAllRead]);
 
   return (
     <NotificationsContext.Provider value={value}>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users,
@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useProperties } from '../contexts/PropertiesContext';
+import { useNotifications } from '../contexts/NotificationsContext';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { NotificationsBell } from '../components/NotificationsBell';
 import { adminAPI, propertyPostingFeeAPI } from '../utils/api';
@@ -52,6 +53,7 @@ export function AdminDashboard() {
   const { user } = useAuth();
   const { favoriteIds } = useFavorites();
   const { refreshProperties } = useProperties();
+  const { newlyReceived } = useNotifications();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -68,24 +70,30 @@ export function AdminDashboard() {
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [messagesError, setMessagesError] = useState('');
 
-  useEffect(() => {
-    let active = true;
-
-    adminAPI.getAllProperties()
-      .then(({ data }) => {
-        if (active) setProperties(data);
-      })
-      .catch(() => {
-        if (active) setError('Unable to load properties.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
+  const loadAdminProperties = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    try {
+      const { data } = await adminAPI.getAllProperties();
+      setProperties(data);
+      setError('');
+    } catch {
+      setError('Unable to load properties.');
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadAdminProperties(true);
+  }, [loadAdminProperties]);
+
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') return;
+    const approvalRequested = newlyReceived.some(
+      (notification) => notification.type === 'PROPERTY_APPROVAL_REQUESTED',
+    );
+    if (approvalRequested) void loadAdminProperties();
+  }, [loadAdminProperties, newlyReceived, user?.role]);
 
   useEffect(() => {
     let active = true;

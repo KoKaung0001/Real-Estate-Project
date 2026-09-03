@@ -125,8 +125,24 @@ class NotificationIntegrationTest {
                 "New Property Approval Request",
                 expectedMessage
         );
-        assertTrue(notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(owner.getId()).isEmpty());
+        List<Notification> ownerNotifications = notificationRepository
+                .findByUserIdOrderByCreatedAtDescIdDesc(owner.getId());
+        assertEquals(1, ownerNotifications.size());
+        Notification submitted = ownerNotifications.getFirst();
+        assertEquals(NotificationType.PROPERTY_SUBMITTED, submitted.getType());
+        assertEquals("Property Submitted", submitted.getTitle());
+        assertEquals(
+                "Your listing \"New Pending Notification Home\" has been submitted for approval.",
+                submitted.getMessage()
+        );
+        assertEquals("/user/my-properties", submitted.getLink());
         assertTrue(notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(unrelatedUser.getId()).isEmpty());
+
+        mockMvc.perform(get("/api/notifications").with(user(new CustomUserDetails(owner))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].type").value("PROPERTY_SUBMITTED"))
+                .andExpect(jsonPath("$[0].isRead").value(false));
 
         mockMvc.perform(put("/api/properties/{id}", property.getId())
                         .with(user(new CustomUserDetails(owner)))
@@ -136,6 +152,7 @@ class NotificationIntegrationTest {
 
         assertEquals(1, notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(admin.getId()).size());
         assertEquals(1, notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(secondAdmin.getId()).size());
+        assertEquals(1, notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(owner.getId()).size());
 
         mockMvc.perform(get("/api/notifications").with(user(new CustomUserDetails(admin))))
                 .andExpect(status().isOk())
@@ -151,10 +168,10 @@ class NotificationIntegrationTest {
         adminService.approveProperty(property.getId());
         assertEquals(1, notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(admin.getId()).size());
         assertEquals(1, notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(secondAdmin.getId()).size());
-        assertEquals(
-                NotificationType.PROPERTY_APPROVED,
-                notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(owner.getId()).getFirst().getType()
-        );
+        ownerNotifications = notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(owner.getId());
+        assertEquals(2, ownerNotifications.size());
+        assertEquals(NotificationType.PROPERTY_APPROVED, ownerNotifications.getFirst().getType());
+        assertEquals(NotificationType.PROPERTY_SUBMITTED, ownerNotifications.get(1).getType());
     }
 
     @Test

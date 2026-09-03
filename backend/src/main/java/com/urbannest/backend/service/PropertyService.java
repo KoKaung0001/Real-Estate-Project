@@ -100,6 +100,7 @@ public class PropertyService {
                 .build();
 
         property = propertyRepository.save(property);
+        notificationService.createPropertySubmittedNotification(property);
         notificationService.createPropertyApprovalRequestNotifications(property);
         return toResponse(property);
     }

@@ -45,7 +45,8 @@ export type NotificationType =
   | 'PROPERTY_APPROVED'
   | 'PROPERTY_REJECTED'
   | 'CONTACT_MESSAGE_RECEIVED'
-  | 'PROPERTY_APPROVAL_REQUESTED';
+  | 'PROPERTY_APPROVAL_REQUESTED'
+  | 'PROPERTY_SUBMITTED';
 
 export interface Notification {
   id: number;

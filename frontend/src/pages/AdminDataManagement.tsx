@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Users, Home, Search, Trash2, Eye, MapPin, Pencil, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProperties } from '../contexts/PropertiesContext';
+import { useNotifications } from '../contexts/NotificationsContext';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { NotificationsBell } from '../components/NotificationsBell';
 import { adminAPI } from '../utils/api';
@@ -21,6 +22,7 @@ const DEMO_USERS: User[] = [
 export function AdminDataManagement() {
   const { user } = useAuth();
   const { refreshProperties } = useProperties();
+  const { newlyReceived } = useNotifications();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') === 'properties' ? 'properties' : 'users';
   const [activeTab, setActiveTab] = useState<'users' | 'properties'>(initialTab);
@@ -36,24 +38,30 @@ export function AdminDataManagement() {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [propDraft, setPropDraft] = useState<Property | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
-    adminAPI.getAllProperties()
-      .then(({ data }) => {
-        if (active) setProperties(data);
-      })
-      .catch(() => {
-        if (active) setPropertyError('Unable to load properties.');
-      })
-      .finally(() => {
-        if (active) setPropertiesLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
+  const loadAdminProperties = useCallback(async (showLoading = false) => {
+    if (showLoading) setPropertiesLoading(true);
+    try {
+      const { data } = await adminAPI.getAllProperties();
+      setProperties(data);
+      setPropertyError('');
+    } catch {
+      setPropertyError('Unable to load properties.');
+    } finally {
+      if (showLoading) setPropertiesLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadAdminProperties(true);
+  }, [loadAdminProperties]);
+
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') return;
+    const approvalRequested = newlyReceived.some(
+      (notification) => notification.type === 'PROPERTY_APPROVAL_REQUESTED',
+    );
+    if (approvalRequested) void loadAdminProperties();
+  }, [loadAdminProperties, newlyReceived, user?.role]);
 
   const filteredUsers = users.filter(
     (u) => u.username.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase())

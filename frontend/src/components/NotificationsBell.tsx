@@ -14,6 +14,8 @@ function getStatusIcon(type: NotificationType) {
       return <Mail />;
     case 'PROPERTY_APPROVAL_REQUESTED':
       return <Clock />;
+    case 'PROPERTY_SUBMITTED':
+      return <CheckCircle />;
   }
 }
 
@@ -27,6 +29,8 @@ function getStatusClass(type: NotificationType) {
       return 'contact';
     case 'PROPERTY_APPROVAL_REQUESTED':
       return 'pending';
+    case 'PROPERTY_SUBMITTED':
+      return 'submitted';
   }
 }
 

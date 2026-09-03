@@ -4366,6 +4366,11 @@ body {
   color: #2563eb;
 }
 
+.notif-icon.submitted {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
 .notif-content {
   flex: 1;
   min-width: 0;

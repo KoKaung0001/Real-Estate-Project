@@ -60,6 +60,17 @@ public class NotificationService {
         );
     }
 
+    @Transactional
+    public void createPropertySubmittedNotification(Property property) {
+        repository.save(Notification.builder()
+                .user(property.getOwner())
+                .type(NotificationType.PROPERTY_SUBMITTED)
+                .title("Property Submitted")
+                .message("Your listing \"" + property.getTitle() + "\" has been submitted for approval.")
+                .link("/user/my-properties")
+                .build());
+    }
+
     private void createAdminNotifications(NotificationType type, String title, String message, String link) {
         List<Notification> notifications = userRepository.findByRole(UserRole.ADMIN).stream()
                 .map(admin -> adminNotification(admin, type, title, message, link))
