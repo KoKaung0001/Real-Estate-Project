@@ -18,11 +18,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -56,6 +60,102 @@ class NotificationIntegrationTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    void contactSubmissionNotifiesEachAdminButNotNormalUsers() throws Exception {
+        User firstAdmin = createUser("contact-admin-one", UserRole.ADMIN);
+        User secondAdmin = createUser("contact-admin-two", UserRole.ADMIN);
+        User normalUser = createUser("contact-normal-user");
+
+        mockMvc.perform(post("/api/contact-messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fullName", "Notification Sender",
+                                "email", "sender@example.test",
+                                "phone", "09 111 222 333",
+                                "message", "Please contact me about UrbanNest."
+                        ))))
+                .andExpect(status().isCreated());
+
+        assertAdminNotification(
+                firstAdmin,
+                NotificationType.CONTACT_MESSAGE_RECEIVED,
+                "New Contact Message",
+                "Notification Sender sent a new contact message."
+        );
+        assertAdminNotification(
+                secondAdmin,
+                NotificationType.CONTACT_MESSAGE_RECEIVED,
+                "New Contact Message",
+                "Notification Sender sent a new contact message."
+        );
+        assertTrue(notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(normalUser.getId()).isEmpty());
+    }
+
+    @Test
+    void newPendingPropertyNotifiesAdminsOnceAndRemainsReadableThroughApi() throws Exception {
+        User admin = createUser("property-admin", UserRole.ADMIN);
+        User secondAdmin = createUser("property-admin-two", UserRole.ADMIN);
+        User owner = createUser("property-owner");
+        User unrelatedUser = createUser("property-unrelated");
+        String title = "New Pending Notification Home";
+        String requestBody = propertyRequest(title);
+
+        mockMvc.perform(post("/api/properties")
+                        .with(user(new CustomUserDetails(owner)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.approvalStatus").value("PENDING"));
+
+        Property property = propertyRepository.findByOwner(owner).getFirst();
+        String expectedMessage = owner.getUsername() + " submitted \"" + title + "\" for approval.";
+        Notification notification = assertAdminNotification(
+                admin,
+                NotificationType.PROPERTY_APPROVAL_REQUESTED,
+                "New Property Approval Request",
+                expectedMessage
+        );
+        assertAdminNotification(
+                secondAdmin,
+                NotificationType.PROPERTY_APPROVAL_REQUESTED,
+                "New Property Approval Request",
+                expectedMessage
+        );
+        assertTrue(notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(owner.getId()).isEmpty());
+        assertTrue(notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(unrelatedUser.getId()).isEmpty());
+
+        mockMvc.perform(put("/api/properties/{id}", property.getId())
+                        .with(user(new CustomUserDetails(owner)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        assertEquals(1, notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(admin.getId()).size());
+        assertEquals(1, notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(secondAdmin.getId()).size());
+
+        mockMvc.perform(get("/api/notifications").with(user(new CustomUserDetails(admin))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].type").value("PROPERTY_APPROVAL_REQUESTED"))
+                .andExpect(jsonPath("$[0].link").value("/admin/dashboard"));
+
+        mockMvc.perform(put("/api/notifications/{id}/read", notification.getId())
+                        .with(user(new CustomUserDetails(admin))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isRead").value(true));
+
+        adminService.approveProperty(property.getId());
+        assertEquals(1, notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(admin.getId()).size());
+        assertEquals(1, notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(secondAdmin.getId()).size());
+        assertEquals(
+                NotificationType.PROPERTY_APPROVED,
+                notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(owner.getId()).getFirst().getType()
+        );
+    }
 
     @Test
     void pendingToApprovedCreatesOwnerNotification() {
@@ -206,14 +306,50 @@ class NotificationIntegrationTest {
     }
 
     private User createUser(String prefix) {
+        return createUser(prefix, UserRole.USER);
+    }
+
+    private User createUser(String prefix, UserRole role) {
         String suffix = UUID.randomUUID().toString().replace("-", "");
         return userRepository.save(User.builder()
                 .username(prefix + "-" + suffix)
                 .email(prefix + "-" + suffix + "@example.test")
                 .password("not-used-in-test")
                 .phone("09 000 000 000")
-                .role(UserRole.USER)
+                .role(role)
                 .build());
+    }
+
+    private Notification assertAdminNotification(
+            User admin,
+            NotificationType type,
+            String title,
+            String message) {
+        List<Notification> notifications = notificationRepository
+                .findByUserIdOrderByCreatedAtDescIdDesc(admin.getId());
+        assertEquals(1, notifications.size());
+        Notification notification = notifications.getFirst();
+        assertEquals(type, notification.getType());
+        assertEquals(title, notification.getTitle());
+        assertEquals(message, notification.getMessage());
+        assertEquals("/admin/dashboard", notification.getLink());
+        assertFalse(notification.isRead());
+        return notification;
+    }
+
+    private String propertyRequest(String title) throws Exception {
+        return objectMapper.writeValueAsString(Map.of(
+                "title", title,
+                "description", "Notification integration test property",
+                "price", 100000,
+                "location", "Yangon",
+                "propertyType", "APARTMENT",
+                "status", "FOR_SALE",
+                "bedrooms", 2,
+                "bathrooms", 1,
+                "area", 750,
+                "imageUrl", ""
+        ));
     }
 
     private Property createProperty(User owner, ApprovalStatus approvalStatus, String title) {

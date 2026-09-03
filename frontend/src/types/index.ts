@@ -41,7 +41,11 @@ export interface ContactMessage extends CreateContactMessageRequest {
   createdAt: string;
 }
 
-export type NotificationType = 'PROPERTY_APPROVED' | 'PROPERTY_REJECTED';
+export type NotificationType =
+  | 'PROPERTY_APPROVED'
+  | 'PROPERTY_REJECTED'
+  | 'CONTACT_MESSAGE_RECEIVED'
+  | 'PROPERTY_APPROVAL_REQUESTED';
 
 export interface Notification {
   id: number;

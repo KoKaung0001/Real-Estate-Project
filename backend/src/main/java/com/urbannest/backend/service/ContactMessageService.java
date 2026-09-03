@@ -15,6 +15,7 @@ import java.util.List;
 public class ContactMessageService {
 
     private final ContactMessageRepository repository;
+    private final NotificationService notificationService;
 
     @Transactional
     public ContactMessageResponse create(CreateContactMessageRequest request) {
@@ -25,7 +26,9 @@ public class ContactMessageService {
                 .message(request.message().trim())
                 .build();
 
-        return toResponse(repository.save(contactMessage));
+        ContactMessage saved = repository.save(contactMessage);
+        notificationService.createContactMessageNotifications(saved.getFullName());
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)

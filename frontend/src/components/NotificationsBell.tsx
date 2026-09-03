@@ -1,11 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, CheckCircle, XCircle } from 'lucide-react';
+import { Bell, CheckCircle, Clock, Mail, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../contexts/NotificationsContext';
 import type { NotificationType } from '../types';
 
 function getStatusIcon(type: NotificationType) {
-  return type === 'PROPERTY_APPROVED' ? <CheckCircle /> : <XCircle />;
+  switch (type) {
+    case 'PROPERTY_APPROVED':
+      return <CheckCircle />;
+    case 'PROPERTY_REJECTED':
+      return <XCircle />;
+    case 'CONTACT_MESSAGE_RECEIVED':
+      return <Mail />;
+    case 'PROPERTY_APPROVAL_REQUESTED':
+      return <Clock />;
+  }
+}
+
+function getStatusClass(type: NotificationType) {
+  switch (type) {
+    case 'PROPERTY_APPROVED':
+      return 'approved';
+    case 'PROPERTY_REJECTED':
+      return 'rejected';
+    case 'CONTACT_MESSAGE_RECEIVED':
+      return 'contact';
+    case 'PROPERTY_APPROVAL_REQUESTED':
+      return 'pending';
+  }
 }
 
 function formatRelativeTime(createdAt: string) {
@@ -112,7 +134,7 @@ export function NotificationsBell() {
                     key={notification.id}
                     onClick={() => void selectNotification(notification.id, notification.link)}
                   >
-                    <div className={`notif-icon ${notification.type === 'PROPERTY_APPROVED' ? 'approved' : 'rejected'}`}>
+                    <div className={`notif-icon ${getStatusClass(notification.type)}`}>
                       {getStatusIcon(notification.type)}
                     </div>
                     <div className="notif-content">

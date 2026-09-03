@@ -4,7 +4,10 @@ import com.urbannest.backend.dto.NotificationResponse;
 import com.urbannest.backend.entity.Notification;
 import com.urbannest.backend.entity.NotificationType;
 import com.urbannest.backend.entity.Property;
+import com.urbannest.backend.entity.User;
+import com.urbannest.backend.entity.UserRole;
 import com.urbannest.backend.repository.NotificationRepository;
+import com.urbannest.backend.repository.UserRepository;
 import com.urbannest.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +23,7 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository repository;
+    private final UserRepository userRepository;
 
     @Transactional
     public void createPropertyStatusNotification(Property property, NotificationType type) {
@@ -34,6 +38,48 @@ public class NotificationService {
                 .link(approved ? "/property/" + property.getId() : "/user/my-properties")
                 .build();
         repository.save(notification);
+    }
+
+    @Transactional
+    public void createContactMessageNotifications(String fullName) {
+        createAdminNotifications(
+                NotificationType.CONTACT_MESSAGE_RECEIVED,
+                "New Contact Message",
+                fullName + " sent a new contact message.",
+                "/admin/dashboard"
+        );
+    }
+
+    @Transactional
+    public void createPropertyApprovalRequestNotifications(Property property) {
+        createAdminNotifications(
+                NotificationType.PROPERTY_APPROVAL_REQUESTED,
+                "New Property Approval Request",
+                property.getOwner().getUsername() + " submitted \"" + property.getTitle() + "\" for approval.",
+                "/admin/dashboard"
+        );
+    }
+
+    private void createAdminNotifications(NotificationType type, String title, String message, String link) {
+        List<Notification> notifications = userRepository.findByRole(UserRole.ADMIN).stream()
+                .map(admin -> adminNotification(admin, type, title, message, link))
+                .toList();
+        repository.saveAll(notifications);
+    }
+
+    private Notification adminNotification(
+            User admin,
+            NotificationType type,
+            String title,
+            String message,
+            String link) {
+        return Notification.builder()
+                .user(admin)
+                .type(type)
+                .title(title)
+                .message(message)
+                .link(link)
+                .build();
     }
 
     @Transactional(readOnly = true)

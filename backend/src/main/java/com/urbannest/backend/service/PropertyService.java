@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -24,6 +25,7 @@ public class PropertyService {
 
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private User getCurrentUser() {
         CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
@@ -66,6 +68,7 @@ public class PropertyService {
         return propertyRepository.findByOwner(owner).stream().map(this::toResponse).toList();
     }
 
+    @Transactional
     public PropertyResponse createProperty(PropertyRequest request) {
         User owner = getCurrentUser();
         Property property = Property.builder()
@@ -97,6 +100,7 @@ public class PropertyService {
                 .build();
 
         property = propertyRepository.save(property);
+        notificationService.createPropertyApprovalRequestNotifications(property);
         return toResponse(property);
     }
 
