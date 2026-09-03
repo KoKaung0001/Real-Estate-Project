@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
                 .requestMatchers(HttpMethod.GET, "/uploads/properties/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/property-posting-fees").permitAll()
+                .requestMatchers("/api/notifications", "/api/notifications/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/me", "/api/users/me/password").authenticated()

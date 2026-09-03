@@ -6,9 +6,11 @@ import com.urbannest.backend.entity.ApprovalStatus;
 import com.urbannest.backend.entity.Property;
 import com.urbannest.backend.entity.PropertyType;
 import com.urbannest.backend.entity.SaleStatus;
+import com.urbannest.backend.entity.NotificationType;
 import com.urbannest.backend.repository.PropertyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
@@ -19,6 +21,7 @@ import java.util.List;
 public class AdminService {
 
     private final PropertyRepository propertyRepository;
+    private final NotificationService notificationService;
 
     public List<PropertyResponse> getAllProperties(ApprovalStatus approvalStatus) {
         List<Property> properties;
@@ -30,19 +33,29 @@ public class AdminService {
         return properties.stream().map(this::toResponse).toList();
     }
 
+    @Transactional
     public String approveProperty(Long id) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Property not found"));
+        boolean statusChanged = property.getApprovalStatus() != ApprovalStatus.APPROVED;
         property.setApprovalStatus(ApprovalStatus.APPROVED);
         propertyRepository.save(property);
+        if (statusChanged) {
+            notificationService.createPropertyStatusNotification(property, NotificationType.PROPERTY_APPROVED);
+        }
         return "Property approved successfully";
     }
 
+    @Transactional
     public String rejectProperty(Long id) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Property not found"));
+        boolean statusChanged = property.getApprovalStatus() != ApprovalStatus.REJECTED;
         property.setApprovalStatus(ApprovalStatus.REJECTED);
         propertyRepository.save(property);
+        if (statusChanged) {
+            notificationService.createPropertyStatusNotification(property, NotificationType.PROPERTY_REJECTED);
+        }
         return "Property rejected successfully";
     }
 

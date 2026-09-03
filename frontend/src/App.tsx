@@ -13,6 +13,7 @@ import { AdminDataManagement } from './pages/AdminDataManagement';
 import { AuthProvider } from './contexts/AuthContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import { PropertiesProvider } from './contexts/PropertiesContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
 import './App.css';
 
 function AppRoutes() {
@@ -49,13 +50,15 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <FavoritesProvider>
-        <PropertiesProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </PropertiesProvider>
-      </FavoritesProvider>
+      <NotificationsProvider>
+        <FavoritesProvider>
+          <PropertiesProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </PropertiesProvider>
+        </FavoritesProvider>
+      </NotificationsProvider>
     </AuthProvider>
   );
 }

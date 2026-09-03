@@ -4302,15 +4302,33 @@ body {
 }
 
 .notif-item {
+  width: 100%;
   display: flex;
   gap: 12px;
   padding: 13px 16px;
+  border: 0;
   border-bottom: 1px solid #f8fafc;
+  background: #fff;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
   transition: background 0.2s;
 }
 
 .notif-item:hover {
   background: #f8fafc;
+}
+
+.notif-item.unread {
+  background: #eff6ff;
+}
+
+.notif-item.unread:hover {
+  background: #dbeafe;
+}
+
+.notif-item.read {
+  opacity: 0.8;
 }
 
 .notif-icon {
@@ -4349,6 +4367,7 @@ body {
 }
 
 .notif-content {
+  flex: 1;
   min-width: 0;
 }
 
@@ -4387,6 +4406,18 @@ body {
 .notif-empty p {
   font-size: 13px;
   color: #94a3b8;
+}
+
+.notif-error p,
+.notif-inline-error {
+  color: #b91c1c;
+}
+
+.notif-inline-error {
+  padding: 9px 16px;
+  border-bottom: 1px solid #fee2e2;
+  background: #fef2f2;
+  font-size: 12px;
 }
 
 .notif-footer {

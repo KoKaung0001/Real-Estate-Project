@@ -3,6 +3,7 @@ import type {
   AuthResponse,
   ContactMessage,
   CreateContactMessageRequest,
+  Notification,
   Property,
   PropertyPostingFee,
   PropertyRequest,
@@ -79,6 +80,12 @@ export const propertyPostingFeeAPI = {
 export const contactMessageAPI = {
   create: (data: CreateContactMessageRequest) =>
     api.post<ContactMessage>('/api/contact-messages', data),
+};
+
+export const notificationAPI = {
+  getAll: () => api.get<Notification[]>('/api/notifications'),
+  markRead: (id: number) => api.put<Notification>(`/api/notifications/${id}/read`),
+  markAllRead: () => api.put<void>('/api/notifications/read-all'),
 };
 
 export const uploadAPI = {

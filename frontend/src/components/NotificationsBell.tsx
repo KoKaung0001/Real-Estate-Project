@@ -1,46 +1,49 @@
-import { useState, useEffect, useRef } from 'react';
-import { Bell, CheckCircle, Clock, XCircle, X, PlusCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useRef, useState } from 'react';
+import { Bell, CheckCircle, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useNotifications } from '../contexts/NotificationsContext';
+import type { NotificationType } from '../types';
 
-interface NotificationItem {
-  id: number;
-  icon: 'approved' | 'pending' | 'rejected' | 'welcome';
-  title: string;
-  body: string;
-  time: string;
+function getStatusIcon(type: NotificationType) {
+  return type === 'PROPERTY_APPROVED' ? <CheckCircle /> : <XCircle />;
 }
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  { id: 3, icon: 'welcome', title: 'Welcome to UrbanNest', body: 'Start browsing or post your first property.', time: 'Just now' },
-  { id: 2, icon: 'pending', title: 'Listing under review', body: 'Your listing "Modern Villa in Dagon" is being reviewed.', time: '2h ago' },
-  { id: 1, icon: 'approved', title: 'Listing approved', body: '"Luxury Apartment in Bahan" is now live.', time: '1d ago' },
-];
+function formatRelativeTime(createdAt: string) {
+  const timestamp = new Date(createdAt).getTime();
+  if (!Number.isFinite(timestamp)) return createdAt;
 
-export function getStatusIcon(type: NotificationItem['icon']) {
-  switch (type) {
-    case 'approved':
-      return <CheckCircle />;
-    case 'pending':
-      return <Clock />;
-    case 'rejected':
-      return <XCircle />;
-    case 'welcome':
-      return <PlusCircle />;
-    default:
-      return <Bell />;
-  }
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(createdAt).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export function NotificationsBell() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    refresh,
+    markRead,
+    markAllRead,
+  } = useNotifications();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (boxRef.current && !boxRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
     }
@@ -48,57 +51,80 @@ export function NotificationsBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const toggleOpen = () => {
+    const nextOpen = !open;
+    setOpen(nextOpen);
+    if (nextOpen) void refresh();
+  };
+
+  const selectNotification = async (id: number, link?: string | null) => {
+    const notification = notifications.find((item) => item.id === id);
+    if (notification && !notification.isRead) {
+      try {
+        await markRead(id);
+      } catch {
+        return;
+      }
+    }
+    setOpen(false);
+    if (link) navigate(link);
+  };
+
   return (
     <div className="notif-wrap" ref={boxRef}>
       <button
         className="notif-bell"
         aria-label="Notifications"
-        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        onClick={toggleOpen}
       >
         <Bell />
-        {notifications.length > 0 && (
-          <span className="notif-badge">{notifications.length}</span>
-        )}
+        {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
       </button>
 
       {open && (
         <div className="notif-panel">
           <div className="notif-panel-header">
             <span className="notif-panel-title">Notifications</span>
-            {notifications.length > 0 && (
-              <button className="notif-clear" onClick={() => setNotifications([])}>
-                <X /> Clear all
+            {unreadCount > 0 && (
+              <button className="notif-clear" onClick={() => void markAllRead()}>
+                <CheckCircle /> Mark all as read
               </button>
             )}
           </div>
           <div className="notif-list">
-            {notifications.length === 0 ? (
+            {loading && notifications.length === 0 ? (
+              <div className="notif-empty"><p>Loading...</p></div>
+            ) : error && notifications.length === 0 ? (
+              <div className="notif-empty notif-error"><p>{error}</p></div>
+            ) : notifications.length === 0 ? (
               <div className="notif-empty">
                 <Bell />
-                <p>No notifications yet</p>
+                <p>No notifications yet.</p>
               </div>
             ) : (
-              notifications.map((n) => (
-                <div className="notif-item" key={n.id}>
-                  <div className={`notif-icon ${n.icon}`}>{getStatusIcon(n.icon)}</div>
-                  <div className="notif-content">
-                    <p className="notif-title">{n.title}</p>
-                    <p className="notif-body">{n.body}</p>
-                    <span className="notif-time">{n.time}</span>
-                  </div>
-                </div>
-              ))
+              <>
+                {error && <div className="notif-inline-error">{error}</div>}
+                {notifications.map((notification) => (
+                  <button
+                    type="button"
+                    className={`notif-item ${notification.isRead ? 'read' : 'unread'}`}
+                    key={notification.id}
+                    onClick={() => void selectNotification(notification.id, notification.link)}
+                  >
+                    <div className={`notif-icon ${notification.type === 'PROPERTY_APPROVED' ? 'approved' : 'rejected'}`}>
+                      {getStatusIcon(notification.type)}
+                    </div>
+                    <div className="notif-content">
+                      <p className="notif-title">{notification.title}</p>
+                      <p className="notif-body">{notification.message}</p>
+                      <span className="notif-time">{formatRelativeTime(notification.createdAt)}</span>
+                    </div>
+                  </button>
+                ))}
+              </>
             )}
           </div>
-          {user && (
-            <Link
-              to="/user/my-properties"
-              className="notif-footer"
-              onClick={() => setOpen(false)}
-            >
-              View my dashboard
-            </Link>
-          )}
         </div>
       )}
     </div>

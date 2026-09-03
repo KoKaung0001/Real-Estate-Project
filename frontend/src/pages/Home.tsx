@@ -35,7 +35,7 @@ function parseBedroomFilter(value: string | null): BedroomFilter | undefined {
 const FEATURES = [
   { icon: Search, title: 'Smart Search', desc: 'Search by township, property type, and budget to find the right home in Yangon.' },
   { icon: Compass, title: 'Verified Listings', desc: 'Every property is reviewed by our admins before it goes live for buyers.' },
-  { icon: Bell, title: 'Instant Alerts', desc: 'Track your listings and get notified about approval status updates.' },
+  { icon: Bell, title: 'Listing Updates', desc: 'Stay informed when your listings are approved or rejected.' },
   { icon: Heart, title: 'Save & Shortlist', desc: 'Save your favorite homes and compare them anytime from your dashboard.' },
 ];
 
