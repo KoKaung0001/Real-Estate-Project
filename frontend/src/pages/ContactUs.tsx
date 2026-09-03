@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Mail, Phone, MessageCircle, MapPin, Clock, Send, CheckCircle2 } from 'lucide-react';
+import { contactMessageAPI } from '../utils/api';
 
 const CONTACT_METHODS = [
-  { icon: Mail, label: 'Email Us', value: 'contact@urbannest.com', hint: 'We reply within 24 hours.' },
+  { icon: Mail, label: 'Email Us', value: 'contact@urbannest.com', hint: 'Send us your questions.' },
   { icon: Phone, label: 'Call Us', value: '+95 9 777 000 111', hint: 'Mon–Fri, 9:00 AM – 6:00 PM.' },
   { icon: MessageCircle, label: 'Viber Us', value: '+95 9 777 000 111', hint: 'Fastest way to reach us.' },
   { icon: MapPin, label: 'Visit Us', value: 'Yangon, Myanmar', hint: 'By appointment only.' },
@@ -12,13 +13,16 @@ export function ContactUs() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
   const [errors, setErrors] = useState<{ name?: string; email?: string; message?: string }>({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
+    setSubmitError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: { name?: string; email?: string; message?: string } = {};
     if (!form.name.trim()) next.name = 'Please enter your name.';
@@ -26,7 +30,23 @@ export function ContactUs() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = 'Please enter a valid email address.';
     if (!form.message.trim()) next.message = 'Please enter your message.';
     setErrors(next);
-    if (Object.keys(next).length === 0) setSubmitted(true);
+    if (Object.keys(next).length > 0) return;
+
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await contactMessageAPI.create({
+        fullName: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || undefined,
+        message: form.message.trim(),
+      });
+      setSubmitted(true);
+    } catch {
+      setSubmitError('We could not send your message. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -57,13 +77,13 @@ export function ContactUs() {
         <section className="contact-main">
           <div className="contact-form-card">
             <h2 className="contact-form-title">Send Us a Message</h2>
-            <p className="contact-form-sub">Fill out the form and we'll get back to you shortly.</p>
+            <p className="contact-form-sub">Fill out the form and our team will review your message.</p>
 
             {submitted ? (
               <div className="contact-success">
                 <CheckCircle2 />
                 <h3>Message Sent!</h3>
-                <p>Thank you, {form.name.trim()}. We've received your message and will reply within 24 hours.</p>
+                <p>Thank you, {form.name.trim()}. We've received your message.</p>
               </div>
             ) : (
               <form className="contact-form" onSubmit={handleSubmit} noValidate>
@@ -106,8 +126,11 @@ export function ContactUs() {
                   />
                   {errors.message && <span className="contact-field-error">{errors.message}</span>}
                 </div>
-                <button type="submit" className="contact-submit-btn">
-                  <Send /> Send Message
+                {submitError && (
+                  <div className="contact-submit-error" role="alert">{submitError}</div>
+                )}
+                <button type="submit" className="contact-submit-btn" disabled={submitting}>
+                  <Send /> {submitting ? 'Sending...' : 'Send Message'}
                 </button>
               </form>
             )}

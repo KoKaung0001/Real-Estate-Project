@@ -5469,6 +5469,77 @@ body {
   margin-top: 20px;
 }
 
+.admin-contact-card {
+  margin-top: 20px;
+}
+
+.admin-contact-subtitle {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.admin-contact-list {
+  padding: 0 20px;
+}
+
+.admin-contact-message {
+  padding: 18px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-contact-message:last-child {
+  border-bottom: 0;
+}
+
+.admin-contact-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.admin-contact-name {
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-contact-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.admin-contact-time {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-contact-body {
+  margin: 12px 0 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.admin-contact-status {
+  padding: 20px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-contact-status.error {
+  color: #b91c1c;
+}
+
 .admin-fees-card {
   margin-top: 20px;
 }
@@ -5744,6 +5815,15 @@ body {
   .admin-fee-input-wrap,
   .admin-fee-input-wrap input {
     width: 100%;
+  }
+
+  .admin-contact-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .admin-contact-time {
+    white-space: normal;
   }
 }
 
@@ -6679,9 +6759,24 @@ body {
   align-self: flex-start;
 }
 
-.contact-submit-btn:hover {
+.contact-submit-btn:hover:not(:disabled) {
   opacity: 0.92;
   transform: translateY(-2px);
+}
+
+.contact-submit-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.contact-submit-error {
+  padding: 11px 13px;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .contact-submit-btn svg {

@@ -13,6 +13,7 @@ import {
   Bed,
   Bath,
   Square,
+  Mail,
   X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,11 +24,25 @@ import { NotificationsBell } from '../components/NotificationsBell';
 import { adminAPI, propertyPostingFeeAPI } from '../utils/api';
 import { resolvePropertyImageUrl } from '../utils/imageUrl';
 import { formatMMKAmount, formatPropertyPrice } from '../utils/price';
-import type { Property, PropertyPostingFee, PropertyType } from '../types';
+import type { ContactMessage, Property, PropertyPostingFee, PropertyType } from '../types';
 
 const formatDate = (iso: string) => {
   try {
     return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return iso;
+  }
+};
+
+const formatDateTime = (iso: string) => {
+  try {
+    return new Date(iso).toLocaleString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   } catch {
     return iso;
   }
@@ -49,6 +64,9 @@ export function AdminDashboard() {
   const [feeLoading, setFeeLoading] = useState(true);
   const [feeMessage, setFeeMessage] = useState('');
   const [feeError, setFeeError] = useState('');
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(true);
+  const [messagesError, setMessagesError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -62,6 +80,25 @@ export function AdminDashboard() {
       })
       .finally(() => {
         if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    adminAPI.getContactMessages()
+      .then(({ data }) => {
+        if (active) setContactMessages(data);
+      })
+      .catch(() => {
+        if (active) setMessagesError('Unable to load contact messages.');
+      })
+      .finally(() => {
+        if (active) setMessagesLoading(false);
       });
 
     return () => {
@@ -376,6 +413,48 @@ export function AdminDashboard() {
                 </table>
               </div>
             </div>
+
+            <section className="admin-card admin-contact-card" aria-labelledby="contact-messages-title">
+              <div className="admin-card-header">
+                <div>
+                  <div id="contact-messages-title" className="admin-card-title">Contact Messages</div>
+                  <div className="admin-contact-subtitle">Messages submitted through the public Contact page.</div>
+                </div>
+                {!messagesLoading && !messagesError && (
+                  <span className="admin-card-badge">{contactMessages.length} total</span>
+                )}
+              </div>
+              {messagesLoading ? (
+                <div className="admin-contact-status">Loading contact messages...</div>
+              ) : messagesError ? (
+                <div className="admin-contact-status error">{messagesError}</div>
+              ) : contactMessages.length === 0 ? (
+                <div className="admin-empty">
+                  <div className="admin-empty-icon"><Mail /></div>
+                  <div className="admin-empty-text">No contact messages yet.</div>
+                </div>
+              ) : (
+                <div className="admin-contact-list">
+                  {contactMessages.map((contactMessage) => (
+                    <article className="admin-contact-message" key={contactMessage.id}>
+                      <div className="admin-contact-heading">
+                        <div>
+                          <div className="admin-contact-name">{contactMessage.fullName}</div>
+                          <div className="admin-contact-details">
+                            <span>{contactMessage.email}</span>
+                            <span>{contactMessage.phone || 'No phone provided'}</span>
+                          </div>
+                        </div>
+                        <time className="admin-contact-time" dateTime={contactMessage.createdAt}>
+                          {formatDateTime(contactMessage.createdAt)}
+                        </time>
+                      </div>
+                      <p className="admin-contact-body">{contactMessage.message}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
 
             <section className="admin-card admin-fees-card" aria-labelledby="posting-fees-title">
               <div className="admin-card-header">

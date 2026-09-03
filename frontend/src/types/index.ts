@@ -29,6 +29,18 @@ export interface PropertyPostingFee {
   feeAmount: number;
 }
 
+export interface CreateContactMessageRequest {
+  fullName: string;
+  email: string;
+  phone?: string;
+  message: string;
+}
+
+export interface ContactMessage extends CreateContactMessageRequest {
+  id: number;
+  createdAt: string;
+}
+
 export interface Property {
   id: number;
   title: string;
