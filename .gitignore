@@ -51,3 +51,9 @@ backend/uploads/
 
 ### TypeScript build artifacts ###
 *.tsbuildinfo
+
+### Local secrets / environment ###
+.env
+.env.*
+!.env.example
+*.secret
